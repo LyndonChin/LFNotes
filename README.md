@@ -2,11 +2,10 @@
 
 This repo is used to record what I have done, what I'm doing and what I'm going to do.
 
----
-
 ## What I'm gonna to learn.
 
 * [FLUX](https://facebook.github.io/flux/docs/overview.html)
+    * [under the hood building moments](https://code.facebook.com/posts/498597036962415/under-the-hood-building-moments/)
 * [Node](nodejs.org)
 	* [node lessions](https://github.com/alsotang/node-lessons)
 	* [airbnb-javascript](https://github.com/airbnb/javascript)
@@ -16,11 +15,11 @@ This repo is used to record what I have done, what I'm doing and what I'm going 
 	* [Xposed](https://github.com/rovo89/Xposed)
 * [react](https://github.com/facebook/react)
 	* [react tutorial](https://github.com/reactjs/react-tutorial)
-* [react-native](https://github.com/facebook/react-native)
+    * [react-native](https://github.com/facebook/react-native)
 * [Fresco](https://github.com/facebook/fresco)
 * [gradle-retrolambda](https://github.com/evant/gradle-retrolambda)
-* [opendmm](https://github.com/huangcheng/opendmm)
 * [Euclid](https://github.com/Yalantis/Euclid)
+* [opendmm](https://github.com/huangcheng/opendmm)
 * [RxJava](https://github.com/lzyzsd/Awesome-RxJava)
 	* [Avengers](https://github.com/saulmm/Avengers)
 * [wax](https://github.com/probablycorey/wax)
@@ -33,13 +32,18 @@ This repo is used to record what I have done, what I'm doing and what I'm going 
 
 ## What I have already mastered.
 
+### Android
+
 * [EventBus](https://github.com/greenrobot/EventBus)
 * [SpringIndicator](https://github.com/chenupt/SpringIndicator)
 * [BadgeView](https://github.com/stefanjauker/BadgeView)
 * [android-iconify](https://github.com/JoanZapata/android-iconify)
+* [cheesesquare](https://github.com/chrisbanes/cheesesquare)
 * [device-year-class](https://github.com/facebook/device-year-class)
 * [android-resource-remover](https://github.com/KeepSafe/android-resource-remover)
-* [cheesesquare](https://github.com/chrisbanes/cheesesquare)
+
+### Web
+
 * [lsbaws](https://github.com/rspivak/lsbaws)
 
 ## What I have wrote.
