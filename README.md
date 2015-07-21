@@ -4,6 +4,7 @@ This repo is used to record what I have done, what I'm doing and what I'm going 
 
 ## What I'm gonna to learn.
 
+* [dexposed](https://github.com/alibaba/dexposed)
 * [awesome-android-ui](https://github.com/wasabeef/awesome-android-ui)
 * [FLUX](https://facebook.github.io/flux/docs/overview.html)
     * [under the hood building moments](https://code.facebook.com/posts/498597036962415/under-the-hood-building-moments/)
