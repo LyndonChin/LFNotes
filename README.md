@@ -5,26 +5,29 @@ This repo is used to record what I have done, what I'm doing and what I'm going 
 ## What I'm gonna to learn.
 
 * [dexposed](https://github.com/alibaba/dexposed)
-* [awesome-android-ui](https://github.com/wasabeef/awesome-android-ui)
+    * [Xposed](https://github.com/rovo89/Xposed)
+* [wax](https://github.com/probablycorey/wax)
+* [Prism](https://github.com/StylingAndroid/Prism)
 * [FLUX](https://facebook.github.io/flux/docs/overview.html)
     * [under the hood building moments](https://code.facebook.com/posts/498597036962415/under-the-hood-building-moments/)
+* [kotlin](https://github.com/JetBrains/kotlin)
+* [gradle-retrolambda](https://github.com/evant/gradle-retrolambda)
+* [RxJava](https://github.com/lzyzsd/Awesome-RxJava)
+	* [Avengers](https://github.com/saulmm/Avengers)
+* [Fresco](https://github.com/facebook/fresco)
+
+---
+
+* [awesome-android-ui](https://github.com/wasabeef/awesome-android-ui)
 * [Node](nodejs.org)
 	* [node lessions](https://github.com/alsotang/node-lessons)
 	* [airbnb-javascript](https://github.com/airbnb/javascript)
 	* [hexo](https://github.com/hexojs/hexo)
-* [kotlin](https://github.com/JetBrains/kotlin)
-* [dexposed](https://github.com/alibaba/dexposed)
-	* [Xposed](https://github.com/rovo89/Xposed)
 * [react](https://github.com/facebook/react)
 	* [react tutorial](https://github.com/reactjs/react-tutorial)
     * [react-native](https://github.com/facebook/react-native)
-* [Fresco](https://github.com/facebook/fresco)
-* [gradle-retrolambda](https://github.com/evant/gradle-retrolambda)
 * [Euclid](https://github.com/Yalantis/Euclid)
 * [opendmm](https://github.com/huangcheng/opendmm)
-* [RxJava](https://github.com/lzyzsd/Awesome-RxJava)
-	* [Avengers](https://github.com/saulmm/Avengers)
-* [wax](https://github.com/probablycorey/wax)
 	
 ### Cross platform
 
