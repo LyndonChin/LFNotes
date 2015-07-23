@@ -63,6 +63,7 @@ app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
 
 ## To Read
 * [Codelab for Android Design Support Library used in I/O Rewind Bangkok session](http://inthecheesefactory.com/blog/android-design-support-library-codelab/)
+* [Becoming Material with Android's Design Support Library](https://www.bignerdranch.com/blog/becoming-material-with-android-design-support-library/)
 * [Instagram with Material Design concept is getting real](http://frogermcs.github.io/Instagram-with-Material-Design-concept-is-getting-real/)
     * [Palette](https://developer.android.com/reference/android/support/v7/graphics/Palette.html)
     * [rebound](http://facebook.github.io/rebound/)
