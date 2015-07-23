@@ -4,12 +4,14 @@ This repo is used to record what I have done, what I'm doing and what I'm going 
 
 ## What I'm gonna to learn.
 
+* [Material Design](material_design)
 * [dexposed](https://github.com/alibaba/dexposed)
     * [Xposed](https://github.com/rovo89/Xposed)
 * [wax](https://github.com/probablycorey/wax)
 * [Prism](https://github.com/StylingAndroid/Prism)
 * [FLUX](https://facebook.github.io/flux/docs/overview.html)
     * [under the hood building moments](https://code.facebook.com/posts/498597036962415/under-the-hood-building-moments/)
+    * [Declarative Programming](https://en.wikipedia.org/wiki/Declarative_programming)
 * [kotlin](https://github.com/JetBrains/kotlin)
 * [gradle-retrolambda](https://github.com/evant/gradle-retrolambda)
 * [RxJava](https://github.com/lzyzsd/Awesome-RxJava)
