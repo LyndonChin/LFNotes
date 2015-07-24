@@ -1,34 +1,31 @@
-## Color
-
-### Example
+## Color Scheme
 ```xml
 <item name="colorPrimary">#2196F3</item>
 <item name="colorPrimaryDark">#1565C0</item>
 <item name="colorAccent">#E91E63</item>
 ```
-
-## dependency
+## Dependency
 ```groovy
 compile 'com.android.support:design:22.2.0'
 ```
-Please note that Design Support Library depends on *Support V4* and *AppCompat v7*. Once you include this library in your project, you will also gain an access to those libraries' components.
+> NOTE: Design Support Library depends on *Support V4* and *AppCompat v7*. Once you include this library in your project, you will also gain an access to those libraries' components.
 
-## widgets
+## Widgets
+
+[Sample Using Design Support Library](https://github.com/chrisbanes/cheesesquare)
 
 ### FloatingActionButton
 
-```xml
-app:fabSize="normal" # 56dp
-app:fabSize="mini" # 40dp
-app:borderWidth="0"
-```
+* `app:fabSize="normal"` =&gt;56dp
+* `app:fabSize="mini"` =&gt;40dp
+* `app:borderWidth="0"`
 
-**Configuration Qualifier**
+**Use Configuration Qualifier to Define dimens**
 
 * res/values/dimens.xml
 * res/values-21/dimens.xml
 
-The depth is automatically set to the best practices one, 6dp at idle state and 12dp at pressed state.
+> The depth is automatically set to the best practices one, 6dp at idle state and 12dp at pressed state.
 
 * `app:elevation`
 * `app:pressedTranslationZ`
@@ -36,10 +33,8 @@ The depth is automatically set to the best practices one, 6dp at idle state and 
 
 ### Toolbar
 
-```xml
-app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
-```
+* `app:popupTheme="@style/ThemeOverlay.AppCompat.Light"`
+* `app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"`
 
 ### AppBarLayout
 
@@ -61,7 +56,9 @@ app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
 
 ```
 
-## To Read
+## Ref
+
+* [Design Support Library](https://guides.codepath.com/android/Design-Support-Library)
 * [Codelab for Android Design Support Library used in I/O Rewind Bangkok session](http://inthecheesefactory.com/blog/android-design-support-library-codelab/)
 * [Becoming Material with Android's Design Support Library](https://www.bignerdranch.com/blog/becoming-material-with-android-design-support-library/)
 * [Instagram with Material Design concept is getting real](http://frogermcs.github.io/Instagram-with-Material-Design-concept-is-getting-real/)
@@ -73,7 +70,7 @@ app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
     * [AppCompat v21 — Material Design for Pre-Lollipop Devices!](http://android-developers.blogspot.com/2014/10/appcompat-v21-material-design-for-pre.html)
     * [Using the Material Theme](http://developer.android.com/training/material/theme.html#ColorPalette)
 
-## Source Snippet
+## Code Snippet
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
