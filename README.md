@@ -5,6 +5,7 @@ This repo is used to record what I have done, what I'm doing and what I'm going 
 ## What I'm gonna to learn.
 
 * [Material Design](material_design)
+* [CocoaPods](https://guides.cocoapods.org/)
 * [dexposed](https://github.com/alibaba/dexposed)
     * [Xposed](https://github.com/rovo89/Xposed)
 * [wax](https://github.com/probablycorey/wax)
