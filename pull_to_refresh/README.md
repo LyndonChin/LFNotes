@@ -21,14 +21,15 @@ Each view pushes dimension specifications **down** the tree during the recursion
 A parent `View` may call `measures()` **more than once** on its children. 
 
 The measure pass uses two classes to communicate dimensions.
-    * The `ViewGroup.LayoutParams` class is used by `View` objects to tell their parents how they want to be measured and positioned.
-        * an exact number
-        * `MATCH_PARENT`
-        * `WRAP_CONTENT`
-    * `MeasureSpec` objects are used to push requirements down the tree from parent to child.
-        * `UNSPECIFIED`
-        * `EXACTLY`
-        * `AT_MOST`
+
+* The `ViewGroup.LayoutParams` class is used by `View` objects to tell their parents how they want to be measured and positioned.
+    * an exact number
+    * `MATCH_PARENT`
+    * `WRAP_CONTENT`
+* `MeasureSpec` objects are used to push requirements down the tree from parent to child.
+    * `UNSPECIFIED`
+    * `EXACTLY`
+    * `AT_MOST`
 
 * To initiate a layout, call `requestLayout`. This method is typically called by a view on itself when it believes that it can no longer fit within its current bounds.
 
@@ -42,6 +43,14 @@ The measure pass uses two classes to communicate dimensions.
 
 * `View` is the base class for *widgets*
 * `ViewGroup` is the base class for *layouts*
+
+### Interesting APIs
+
+* `measureChild(View child, int parentWidthMeasureSpec, int parentHeightMeasureSpec)`
+    * Ask one of the children of this view to measure itself, taking into account both the MeasureSpec requiments for this view and its padding.
+* `measureChildWithMargins(View child, int parentWidthMeasureSpec, int widthUsed, int parentHeightMeasureSpec, int heightUsed)`
+    * Ask one of the children of this view to measure itself, taking into account both the MeasureSpec requiments for this view and its padding **and margins**.
+* `shouldDelayChildPressedState()`
 
 #### Definition
 
@@ -59,6 +68,7 @@ A view has a **location**, expressed as *a pair of left and top coordinates*, an
     * These values may, but do not have to, be different from measured width and height.
 
 Even though a view can define a **padding**, it does not provide any support for margins. However, view groups provide such a support.
+
     * `ViewGroup` and `ViewGroup.MarginLayoutParams`.
 
 `onFinishInflate()` - Called after a view and all of its children has been inflated from XML.
