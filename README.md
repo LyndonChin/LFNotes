@@ -2,26 +2,20 @@
 
 This repo is used to record what I have done, what I'm doing and what I'm going to do.
 
-## Go Go Go
-
-### Open Source
-* Android Maginifier View
-* Android Pullable View
-* Kanji (*Android/iOS*)
-* Kotowaza (*Android/iOS*)
+## Doing
 
 ### R&D efficiency
 * [Pull to Refresh](pull_to_refresh)
+* [hotpatch](hotpatch)
+
+### experience optimization
 * [Material Design](material_design)
 * [Prism](https://github.com/StylingAndroid/Prism)
-* [dexposed](https://github.com/alibaba/dexposed)
-    * [Xposed](https://github.com/rovo89/Xposed)
-* CloudFix
 
+## What I'm gonna do.
 ### Python
 * [opendmm](https://github.com/huangcheng/opendmm)
 
-## What I'm gonna do.
 ### Android
 * [Fresco](https://github.com/facebook/fresco)
 * [awesome-android-ui](https://github.com/wasabeef/awesome-android-ui)
@@ -44,13 +38,13 @@ This repo is used to record what I have done, what I'm doing and what I'm going 
 	* [Avengers](https://github.com/saulmm/Avengers)
 
 ### Web
+* [react](https://github.com/facebook/react)
+	* [react tutorial](https://github.com/reactjs/react-tutorial)
+    * [react-native](https://github.com/facebook/react-native)
 * [Node](nodejs.org)
 	* [node lessions](https://github.com/alsotang/node-lessons)
 	* [airbnb-javascript](https://github.com/airbnb/javascript)
 	* [hexo](https://github.com/hexojs/hexo)
-* [react](https://github.com/facebook/react)
-	* [react tutorial](https://github.com/reactjs/react-tutorial)
-    * [react-native](https://github.com/facebook/react-native)
 	
 ### Cross platform
 * [djinni](https://github.com/dropbox/djinni)
@@ -59,7 +53,7 @@ This repo is used to record what I have done, what I'm doing and what I'm going 
 ## What I have already mastered.
 
 ### Android
-* [x] [EventBus](https://github.com/greenrobot/EventBus)
+* [EventBus](https://github.com/greenrobot/EventBus)
 * [SpringIndicator](https://github.com/chenupt/SpringIndicator)
 * [BadgeView](https://github.com/stefanjauker/BadgeView)
 * [android-iconify](https://github.com/JoanZapata/android-iconify)
