@@ -13,6 +13,13 @@ This repo is used to record what I have done, what I'm doing and what I'm going 
 * [Prism](https://github.com/StylingAndroid/Prism)
 
 ## What I'm gonna do.
+
+### Architecture
+* [FLUX](https://facebook.github.io/flux/docs/overview.html)
+    * [under the hood building moments](https://code.facebook.com/posts/498597036962415/under-the-hood-building-moments/)
+    * [Declarative Programming](https://en.wikipedia.org/wiki/Declarative_programming)
+    * [Facebook just taught us all how to build websites](https://blog.gyrosco.pe/facebook-just-taught-us-all-how-to-build-websites-51f1e7e996f2)
+
 ### Python
 * [opendmm](https://github.com/huangcheng/opendmm)
 
@@ -24,12 +31,6 @@ This repo is used to record what I have done, what I'm doing and what I'm going 
 ### iOS
 * [CocoaPods](https://guides.cocoapods.org/)
 * [wax](https://github.com/probablycorey/wax)
-
-### Architecture
-* [FLUX](https://facebook.github.io/flux/docs/overview.html)
-    * [under the hood building moments](https://code.facebook.com/posts/498597036962415/under-the-hood-building-moments/)
-    * [Declarative Programming](https://en.wikipedia.org/wiki/Declarative_programming)
-    * [Facebook just taught us all how to build websites](https://blog.gyrosco.pe/facebook-just-taught-us-all-how-to-build-websites-51f1e7e996f2)
 
 ### Programming Language
 * [kotlin](https://github.com/JetBrains/kotlin)
