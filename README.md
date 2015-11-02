@@ -3,8 +3,8 @@
 **TODO**
 
 0. 代码静态扫描
-    0. 学习 Java Annotation 写法
-    0. Android Annotations 用法详解
+    0. ~~学习 Java Annotation 写法~~
+    0. ~~Android Annotations 用法详解~~
     0. Infer 静态扫描，服务化
 0. 总结下拉刷新，开源一个组件
     0. 实现原理
