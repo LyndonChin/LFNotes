@@ -3,6 +3,7 @@
 0. 模块初始化策略
 0. 插件化（Atlas、MultiDex）
 0. 热修复技术（Hotpatch）
+0. PUSH
 0. 网络（okHttp）
 0. 图片加载（fresco）
 0. 代码静态分析 - infer
