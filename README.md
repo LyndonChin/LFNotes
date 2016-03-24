@@ -11,9 +11,9 @@
 0. PUSH
 0. Log 处理方式
 0. Webview / JsBride
-  * [Rainbow](https://github.com/LyndonChin/Rainbow)
-  * [safe-java-js-webview-bridge](https://github.com/pedant/safe-java-js-webview-bridge)
-  * [jsBridge](https://github.com/lzyzsd/JsBridge)
+  * [] [Rainbow](https://github.com/LyndonChin/Rainbow)
+  * [x] [safe-java-js-webview-bridge](https://github.com/pedant/safe-java-js-webview-bridge)
+  * [x] [jsBridge](https://github.com/lzyzsd/JsBridge)
 0. 异步
 0. 埋点
 0. 代码管理 - Gitlab
@@ -31,5 +31,5 @@
 ## awesome blogs
 
 0. [ph0b's](http://ph0b.com/)
-  * [What you should know about .so files](http://ph0b.com/android-abis-and-so-files/)
+  * [x] [What you should know about .so files](http://ph0b.com/android-abis-and-so-files/)
 
