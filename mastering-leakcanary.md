@@ -137,4 +137,93 @@ protected void afterDefaultHandling(HeapDump heapDump, AnalysisResult result, St
 ExcludedRefs
 ---
 
-LeakCanary 的 heap analyzer 会分析 suspected leaking reference 到 GC roots（一般是 reference tree 的叶子节点）最短路径，具体[可看这里](http://stackoverflow.com/questions/6366211/what-are-the-roots)。
+LeakCanary 的 heap analyzer 会寻找 suspected leaking reference 到 GC roots（一般是 reference tree 的叶子节点）的最短路径，但是如果由于路径上的某个节点造成的泄露暂时无法解决，我们应当结束本次寻找，转而去寻找次短路径。
+那么，那么我们应当把这些造成泄漏但是暂时无法解决的节点存储起来，而且最短路径中不能包含这些 reference。
+
+_关于 GC root 可[查看这里](http://stackoverflow.com/questions/6366211/what-are-the-roots)。_
+
+`ExcludedRefs` 其实就是这些 Reference 的存储器。
+
+Reference 可分为以下几种类型：
+
+* field
+* static field
+* thread
+* class
+* root class
+
+```java
+public final Map<String, Map<String, Exclusion>> fieldNameByClassName;
+public final Map<String, Map<String, Exclusion>> staticFieldNameByClassName;
+public final Map<String, Exclusion> threadNames;
+public final Map<String, Exclusion> classNames;
+public final Map<String, Exclusion> rootClassNames;
+```
+他们都用 unmodifiable map 来存储：
+
+```java
+ExcludedRefs(BuilderWithParams builder) {
+  this.fieldNameByClassName = unmodifiableRefStringMap(builder.fieldNameByClassName);
+  this.staticFieldNameByClassName = unmodifiableRefStringMap(builder.staticFieldNameByClassName);
+  this.threadNames = unmodifiableRefMap(builder.threadNames);
+  this.classNames = unmodifiableRefMap(builder.classNames);
+  this.rootClassNames = unmodifiableRefMap(builder.rootClassNames);
+}
+```
+
+其中 `Exclusion` 是节点 reference 的数据结构：
+
+```java
+public final class Exclusion implements Serializable {
+  public final String name;
+  public final String reason;
+  public final boolean alwaysExclude;
+  public final String matching;
+}
+```
+
+`ExcludedRefs` 同时提供了一个 `Builder`，用于构建 references。
+
+```java
+public interface Builder {
+  BuilderWithParams instanceField(String className, String fieldName);
+  BuilderWithParams staticField(String className, String fieldName);
+  BuilderWithParams thread(String threadName);
+  BuilderWithParams clazz(String className);
+  BuilderWithParams rootClass(String rootSuperClassName);
+  ExcludedRefs build();
+}
+```
+
+其中 `BuilderWithParams` 实现了 `Builder` 接口（*这个地方设计好奇怪*）用于构建一个 `ExcludedRefs`。
+
+**instanceField** 和 **staticField** 的构建方式相同，我们只看 `staticField` 方法。
+
+```java
+@Override
+public BuilderWithParams staticField(String className, String fieldName) {
+  Map<String, ParamsBuilder> excludedFields = staticFieldNameByClassName.get(className);
+  if (excludedFields == null) {
+    excludedFields = new LinkedHashMap<>();
+    staticFieldNameByClassName.put(className, excludedFields);
+  }
+  lastParams = new ParamsBuilder("static field " + className + "#" + fieldName);
+  excludedFields.put(fieldName, lastParams);
+  return this;
+}
+```
+
+`staticFieldNameByClassName` 的 key 是 `className`，value 是 `excludedFields`，也是一个 Map - `Map<String, ParamsBuilder>`。
+
+`excludedFields` 的 key 是 `fieldName`，value 是一个 `ParamsBuilder`，定义跟 `Exclusion` 一样，也代表 reference 节点。
+
+**thread**、**clazz**、**rootClass** 的构造方式向同，我们只看 `thread` 方法。
+
+```java
+@Override
+public BuilderWithParams thread(String threadName) {
+  lastParams = new ParamsBuilder("any threads named " + threadName);
+  threadNames.put(threadName, lastParams);
+  return this;
+}
+```
