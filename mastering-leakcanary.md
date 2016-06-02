@@ -227,3 +227,143 @@ public BuilderWithParams thread(String threadName) {
   return this;
 }
 ```
+`threadNames` 也是一个 map，key 对应 `threadName`, value 是 `ParamsBuilder` 类型的 reference 节点。
+
+ LeakCanary 也提供了一个默认的 `ExcludedRefs`，不过构造方式有点特殊，它没有直接继承 `ExcludedRefs`，而是首先定义了一个 enum 类型的类 - `AndroidExcludedRefs`，然后通过 enum 的变量对需要 exclude 的 ref 进行了分类，我们可以通过代码具体来看。
+
+ _**注意**：`AndroidExcludedRefs` 是一个 enum，并没有继承 `ExcludedRefs`。_
+
+ 首先是 enum 的全貌：
+
+```java
+public enum AndroidExcludedRefs {
+  ACTIVITY_CLIENT_RECORD__NEXT_IDLE(SDK_INT >= KITKAT && SDK_INT <= LOLLIPOP) {
+    @Override void add(ExcludedRefs.Builder excluded) {
+      excluded.instanceField("android.app.ActivityThread$ActivityClientRecord", "nextIdle")
+          .reason("Android AOSP sometimes keeps a reference to a destroyed activity as a"
+              + " nextIdle client record in the android.app.ActivityThread.mActivities map."
+              + " Not sure what's going on there, input welcome.");
+    }
+  },
+
+  // 其他 enum instances 省略
+
+  /**
+   * This returns the references in the leak path that should be ignored by all on Android.
+   */
+  public static ExcludedRefs.Builder createAndroidDefaults() {
+    return createBuilder(
+        EnumSet.of(SOFT_REFERENCES, FINALIZER_WATCHDOG_DAEMON, MAIN, LEAK_CANARY_THREAD,
+            EVENT_RECEIVER__MMESSAGE_QUEUE, SERVICE_BINDER));
+  }
+  /**
+   * This returns the references in the leak path that can be ignored for app developers. This
+   * doesn't mean there is no memory leak, to the contrary. However, some leaks are caused by bugs
+   * in AOSP or manufacturer forks of AOSP. In such cases, there is very little we can do as app
+   * developers except by resorting to serious hacks, so we remove the noise caused by those leaks.
+   */
+  public static ExcludedRefs.Builder createAppDefaults() {
+      return createBuilder(EnumSet.allOf(AndroidExcludedRefs.class));
+  }
+
+  public static ExcludedRefs.Builder createBuilder(EnumSet<AndroidExcludedRefs> refs) {
+      ExcludedRefs.Builder excluded = ExcludedRefs.builder();
+      for (AndroidExcludedRefs ref : refs) {
+        if (ref.applies) {
+          ref.add(excluded);
+          ((ExcludedRefs.BuilderWithParams) excluded).named(ref.name());
+        }
+      }
+      return excluded;
+  }
+
+  final boolean applies;
+
+  AndroidExcludedRefs() {
+    this(true);
+  }
+
+  AndroidExcludedRefs(boolean applies) {
+    this.applies = applies;
+  }
+
+  abstract void add(ExcludedRefs.Builder excluded);
+}
+```
+*`EnumSet` 是一个以 enum 为 key 的 set*
+
+---
+
+再回到 `install` 方法。
+
+```java
+/**
+  * Creates a {@link RefWatcher} that reports results to the provided service, and starts watching
+  * activity references (on ICS+).
+  */
+public static RefWatcher install(Application application,
+   Class<? extends AbstractAnalysisResultService> listenerServiceClass,
+  ExcludedRefs excludedRefs) {
+  if (isInAnalyzerProcess(application)) {
+   return RefWatcher.DISABLED;
+  }
+  enableDisplayLeakActivity(application);
+  HeapDump.Listener heapDumpListener =
+     new ServiceHeapDumpListener(application, listenerServiceClass);
+  RefWatcher refWatcher = androidWatcher(application, heapDumpListener, excludedRefs);
+  ActivityRefWatcher.installOnIcsPlus(application, refWatcher);
+  return refWatcher;
+}
+```
+`HeapAnalyzerService` 是一个单独的 process。
+
+```java
+<service
+    android:name=".internal.HeapAnalyzerService"
+    android:process=":leakcanary"
+    android:enabled="false"
+    />
+```
+`isInAnalyzerProcess` 用于保证 `application` 跟 `HeapAnalyzerService` 不是同一个线程，如果分析和监控在同一个线程会影响到 `application` 的内存状态。
+
+如果 `application` 跟 `HeapAnalyzerService` 是同一个 process，则返回一个空的 `RefWatcher`，什么都不做。
+
+来看一下 `enableDisplayLeakActivity(application);` 做了哪些事。
+
+```java
+public static void enableDisplayLeakActivity(Context context) {
+  setEnabled(context, DisplayLeakActivity.class, true);
+}
+```
+
+其中 `setEnabled` 是类 `LeakCanaryInternals` 的一个 static 方法：
+
+```java
+public static void setEnabled(Context context, final Class<?> componentClass,
+    final boolean enabled) {
+  final Context appContext = context.getApplicationContext();
+  executeOnFileIoThread(new Runnable() {
+    @Override public void run() {
+      setEnabledBlocking(appContext, componentClass, enabled);
+    }
+  });
+}
+
+private static final Executor fileIoExecutor = newSingleThreadExecutor("File-IO");
+public static void executeOnFileIoThread(Runnable runnable) {
+  fileIoExecutor.execute(runnable);
+}
+```
+
+`setEnabledBlocking` 用于使能一个 `component`：
+
+```java
+public static void setEnabledBlocking(Context appContext, Class<?> componentClass,
+    boolean enabled) {
+  ComponentName component = new ComponentName(appContext, componentClass);
+  PackageManager packageManager = appContext.getPackageManager();
+  int newState = enabled ? COMPONENT_ENABLED_STATE_ENABLED : COMPONENT_ENABLED_STATE_DISABLED;
+  // Blocks on IPC.
+  packageManager.setComponentEnabledSetting(component, newState, DONT_KILL_APP);
+}
+```
