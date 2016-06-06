@@ -483,3 +483,97 @@ public static void sendResultToListener(Context context, String listenerServiceC
 HeapDump.Listener heapDumpListener = new ServiceHeapDumpListener(application, listenerServiceClass);
 RefWatcher refWatcher = androidWatcher(application, heapDumpListener, excludedRefs)
 ```
+
+来分析一下 Android 的 `RefWatcher` 是如何被创建出来的。
+
+```java
+public static RefWatcher androidWatcher(Context context, HeapDump.Listener heapDumpListener,
+    ExcludedRefs excludedRefs) {
+  LeakDirectoryProvider leakDirectoryProvider = new DefaultLeakDirectoryProvider(context);
+  DebuggerControl debuggerControl = new AndroidDebuggerControl();
+  AndroidHeapDumper heapDumper = new AndroidHeapDumper(context, leakDirectoryProvider);
+  heapDumper.cleanup();
+  Resources resources = context.getResources();
+  int watchDelayMillis = resources.getInteger(R.integer.leak_canary_watch_delay_millis);
+  AndroidWatchExecutor executor = new AndroidWatchExecutor(watchDelayMillis);
+  return new RefWatcher(executor, debuggerControl, GcTrigger.DEFAULT, heapDumper,
+      heapDumpListener, excludedRefs);
+}
+```
+
+`LeakDirectoryProvider` 是一个用于存储 heap dumps & analysis result 的 interface，除此之外它还定义了用于获取权限的方法。
+
+```java
+public interface LeakDirectoryProvider {
+
+  /** Returns a path to an existing directory were leaks can be stored. */
+  File leakDirectory();
+
+  void requestWritePermissionNotification();
+
+  void requestPermission(Activity activity);
+
+  /** True if we can currently write to the leak directory. */
+  boolean isLeakStorageWritable();
+}
+```
+
+`DefaultLeakDirectoryProvider` 默认的 leak directory 位于 **Download/leakcanary-APP包名（ApplicationId）**。
+
+```java
+@Override
+public File leakDirectory() {
+  File downloadsDirectory = Environment.getExternalStoragePublicDirectory(DIRECTORY_DOWNLOADS);
+  File directory = new File(downloadsDirectory, "leakcanary-" + context.getPackageName());
+  // ...
+}
+```
+
+`isLeakStorageWritable` 用于判断是否有 write 权限。
+
+```java
+@Override
+public boolean isLeakStorageWritable() {
+  if (!hasStoragePermission()) {
+    return false;
+  }
+  String state = Environment.getExternalStorageState();
+  return Environment.MEDIA_MOUNTED.equals(state);
+}
+
+@TargetApi(M)
+private boolean hasStoragePermission() {
+  if (SDK_INT < M) {
+    return true;
+  }
+  return context.checkSelfPermission(WRITE_EXTERNAL_STORAGE) == PERMISSION_GRANTED;
+}
+```
+
+`DebuggerControl` 也是一个 interface，用于判断 debugger 是否 attached，debugger 会持有变量的 reference 因此会干扰分析，`RefWatcher#watch` 检测到 `debuggerControl.isDebuggerAttached()` 为 `true` 会直接返回，不执行 watch 线程。
+
+```java
+/**
+ * Gives the opportunity to skip checking if a reference is gone when the debugger is connected.
+ * An attached debugger might retain references and create false positives.
+ */
+public interface DebuggerControl {
+  DebuggerControl NONE = new DebuggerControl() {
+    @Override public boolean isDebuggerAttached() {
+      return false;
+    }
+  };
+
+  boolean isDebuggerAttached();
+}
+```
+
+`AndroidDebuggerControl` 实现了 `DebuggerControl`。
+
+```java
+public final class AndroidDebuggerControl implements DebuggerControl {
+  @Override public boolean isDebuggerAttached() {
+    return Debug.isDebuggerConnected();
+  }
+}
+```
