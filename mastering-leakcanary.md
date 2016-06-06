@@ -290,6 +290,7 @@ public enum AndroidExcludedRefs {
   abstract void add(ExcludedRefs.Builder excluded);
 }
 ```
+
 *`EnumSet` 是一个以 enum 为 key 的 set*
 
 ---
@@ -328,7 +329,7 @@ public static RefWatcher install(Application application,
 
 如果 `application` 跟 `HeapAnalyzerService` 是同一个 process，则返回一个空的 `RefWatcher`，什么都不做。
 
-来看一下 `enableDisplayLeakActivity(application);` 做了哪些事。
+来看一下 `enableDisplayLeakActivity(application)` 做了哪些事。
 
 ```java
 public static void enableDisplayLeakActivity(Context context) {
@@ -336,7 +337,7 @@ public static void enableDisplayLeakActivity(Context context) {
 }
 ```
 
-其中 `setEnabled` 是类 `LeakCanaryInternals` 的一个 static 方法：
+其中 `setEnabled` 是类 `LeakCanaryInternals` 的一个 `static` 方法：
 
 ```java
 public static void setEnabled(Context context, final Class<?> componentClass,
@@ -366,4 +367,119 @@ public static void setEnabledBlocking(Context appContext, Class<?> componentClas
   // Blocks on IPC.
   packageManager.setComponentEnabledSetting(component, newState, DONT_KILL_APP);
 }
+```
+
+`HeapDump` 用于存储被 dump 出的 heap 信息（未分析），它包含了如下内容：
+
+* `File heapDumpFile` - dump 文件名，可上传到服务器
+* `String referenceKey` - RefWatcher 会给需要监控的 Reference 创建一个带了 key 和 name 的 `WeakReference`
+* `String referenceName` - Reference 的 name
+* `ExcludedRefs excludedRefs` - 前面已经分析过了，用于计算最短引用路径时需要排除的节点
+* `long watchDurationMs` - 从 watch request 开始到 gc 之前的时间
+* `long gcDurationMs` - gc 持续时间
+* `long heapDumpDurationMs` - dump heap 所花费时间
+
+`HeapDump` 还定义了一个内部类 - `Listener`，用于回调分析 heap。
+
+```java
+public interface Listener {
+  void analyze(HeapDump heapDump);
+}
+```
+
+---
+
+`RefWatcher#install` 在 `enableDisplayLeakActivity` 之后创建了一个 `heapDumpListener`。
+
+```java
+HeapDump.Listener heapDumpListener = new ServiceHeapDumpListener(application, listenerServiceClass);
+```
+
+其中 `ServiceHeapDumpListener` 继承自 `HeapDump.Listener`。
+
+```java
+public final class ServiceHeapDumpListener implements HeapDump.Listener {
+
+  private final Context context;
+  private final Class<? extends AbstractAnalysisResultService> listenerServiceClass;
+
+  public ServiceHeapDumpListener(Context context,
+      Class<? extends AbstractAnalysisResultService> listenerServiceClass) {
+    setEnabled(context, listenerServiceClass, true);
+    setEnabled(context, HeapAnalyzerService.class, true);
+    this.listenerServiceClass = checkNotNull(listenerServiceClass, "listenerServiceClass");
+    this.context = checkNotNull(context, "context").getApplicationContext();
+  }
+
+  @Override public void analyze(HeapDump heapDump) {
+    checkNotNull(heapDump, "heapDump");
+    HeapAnalyzerService.runAnalysis(context, heapDump, listenerServiceClass);
+  }
+}
+```
+
+构造方法中 enable 了两个 intentService：
+
+* `listenerServiceClass` - `install` 方法传进来的是 `DisplayLeakService`，用于通知用户分析结果
+* `HeapAnalyzerService` - 用于 `runAnalysis`
+
+你耕田来我织布，你分析来我通知，
+
+---
+
+继续看 `HeapAnalyzerService` 的实现。
+
+静态方法 `runAnalysis` 启动了 `HeapAnalyzerService`，并把 heapDump 和 listenerServiceClass 传递给它。
+
+```java
+private static final String LISTENER_CLASS_EXTRA = "listener_class_extra";
+private static final String HEAPDUMP_EXTRA = "heapdump_extra";
+
+public static void runAnalysis(Context context, HeapDump heapDump,
+    Class<? extends AbstractAnalysisResultService> listenerServiceClass) {
+  Intent intent = new Intent(context, HeapAnalyzerService.class);
+  intent.putExtra(LISTENER_CLASS_EXTRA, listenerServiceClass.getName());
+  intent.putExtra(HEAPDUMP_EXTRA, heapDump);
+  context.startService(intent);
+}
+```
+
+在异步方法 `onHandleIntent` 创建一个 heap analyzer，然后 check for leak，最后把分析结果通过 `AbstractAnalysisResultService` 的静态方法 `sendResultToListener` 交给 `DisplayLeakService`。
+
+```java
+HeapAnalyzer heapAnalyzer = new HeapAnalyzer(heapDump.excludedRefs);
+AnalysisResult result = heapAnalyzer.checkForLeak(heapDump.heapDumpFile, heapDump.referenceKey);
+AbstractAnalysisResultService.sendResultToListener(this, listenerClassName, heapDump, result)
+```
+
+`heapAnalyzer.checkForLeak` 在原理部分再做分析，先来看 `AbstractAnalysisResultService#sendResultToListener`，
+它是一个 static 方法，因此无法多态，但是其中一个参数是 `String listenerServiceClassName`，有了 `DisplayLeakService` （继承自 `AbstractAnalysisResultService`）的 class name 就可以通过 `Class.forName` 找到对应的 class，进而创建一个 `Intent`，启动 `DisplayLeakService`。
+
+```java
+public static void sendResultToListener(Context context, String listenerServiceClassName,
+    HeapDump heapDump, AnalysisResult result) {
+  Class<?> listenerServiceClass;
+  try {
+    listenerServiceClass = Class.forName(listenerServiceClassName);
+  } catch (ClassNotFoundException e) {
+    throw new RuntimeException(e);
+  }
+  Intent intent = new Intent(context, listenerServiceClass);
+  intent.putExtra(HEAP_DUMP_EXTRA, heapDump);
+  intent.putExtra(RESULT_EXTRA, result);
+  context.startService(intent);
+}
+```
+
+通过以上分析可知，**`ServiceHeapDumpListener` 在 `HeapDump` 创建之后通过 `analyze` 方法启动了 HeapAnalyzerService，而 HeapAnalyzerService 在分析完 heap dump file 之后又启动了 `DisplayLeakService`**。
+
+那 `analyze` 是什么时候被调用的呢？再回到 `LeakCanary#install` 方法。
+
+---
+
+新建了一个 `heapDumpListener` 之后又通过静态方法 `androidWatcher` 创建了 `RefWatcher`。
+
+```java
+HeapDump.Listener heapDumpListener = new ServiceHeapDumpListener(application, listenerServiceClass);
+RefWatcher refWatcher = androidWatcher(application, heapDumpListener, excludedRefs)
 ```
