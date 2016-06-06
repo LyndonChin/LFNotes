@@ -724,7 +724,12 @@ return new RefWatcher(executor, debuggerControl, GcTrigger.DEFAULT, heapDumper,
 ActivityRefWatcher.installOnIcsPlus(application, refWatcher);
 ```
 
-`ActivityRefWatcher` 并不是 `RefWatcher` 的子类，这点需要注意，我们从 `installOnIcsPlus` 方法开始分析。
+ActivityRefWatcher
+---
+
+> 注意：`ActivityRefWatcher` 并不是 `RefWatcher` 的子类。
+
+我们从 `installOnIcsPlus` 方法开始分析。
 
 ```java
 public static void installOnIcsPlus(Application application, RefWatcher refWatcher) {
