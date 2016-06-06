@@ -1,17 +1,14 @@
 LeakCanary 原理分析
 ---
-
-用法请参考 [LeakCanary 中文使用说明](http://www.liaohuqiu.net/cn/posts/leak-canary-read-me/)。
-
-LeakCanary 的用法非常简单，只需要在 `onApplication#onCreate` 中添加一行代码就可以了。
-
+**LeakCanary** 的用法非常简单，如果 SDK 版本 >= ICS，只需要在 `Application` 的 `onCreate` 方法中添加一行代码就搞定。
 ```java
 LeakCanary.install(this);
 ```
+具体用法请参考 [LeakCanary 中文使用说明](http://www.liaohuqiu.net/cn/posts/leak-canary-read-me/)。
 
-我们就顺着 `install` 方法看下去。
+我们就从 `LeakCanary#install` 方法开始分析。
 
-install
+LeakCanary#install
 ---
 
 *com/squareup/leakcanary/LeakCanary.java*
@@ -27,9 +24,7 @@ public static RefWatcher install(Application application) {
 }
 ```
 
-`install` 方法创建了一个 `RefWatcher` 用于监控 `activity` 的 `references`。
-
-这里的 `install` 方法使用默认参数 `DisplayLeakService.class`、`AndroidExcludedRefs.createAppDefaults().build()` 调用了另外一个 `install` 方法。
+这里的 `install` 方法使用默认参数 `DisplayLeakService.class`、`AndroidExcludedRefs.createAppDefaults().build()` 通过调用另外一个 `install` 方法，创建了一个 `RefWatcher` ，用于监控 `activity` 的 `references`。
 
 ```java
 /**
@@ -51,14 +46,14 @@ public static RefWatcher install(Application application,
 }
 ```
 
-带三个参数的 `install` 方法会将检测结果传递给通过 `listenerServiceClass` 创建的实例。
+这个 `install` 方法会在 `Activity` 执行 `onDestory` 之后立即开始监控当前 `Activity` 的 `reference`，主动触发 GC 之后将 dump 出的 heap 数据通过 `heapDumpListener` 传递给 `AbstractAnalysisResultService` 的实例。
 
-传递结果
+AbstractAnalysisResultService
 ---
 
 *com/squareup/leakcanary/AbstractAnalysisResultService.java*
 
-`AbstractAnalysisResultService` 是一个抽象类，继承自 `IntentService`，在 `onHandleIntent` 方法中把 **heapDump** 及 **AnalysisResult** 回调给 `onHeapAnalyzed` 方法，`onHeapAnalyzed` 执行完毕后立即删除 dump 文件。
+`AbstractAnalysisResultService` 是一个继承自 `IntentService` 的抽象类，在 `onHandleIntent` 方法中把 `heapDump` 及 `AnalysisResult` 回调给抽象方法 -  `onHeapAnalyzed`，并在 `onHeapAnalyzed` 执行完成后就删除存储在 `heapDump` 的 `heapDumpFile`。
 
 ```java
 @Override
@@ -75,7 +70,7 @@ protected final void onHandleIntent(Intent intent) {
 protected abstract void onHeapAnalyzed(HeapDump heapDump, AnalysisResult result);
 ```
 
-`AbstractAnalysisResultService` 还是提供了一个非常 *handy* 的静态方法 - `sendResultToListener`，用于启动 Service 并传递参数。
+同时 `AbstractAnalysisResultService` 还提供了一个非常 *handy* 的静态方法 - `sendResultToListener`，用于传递参数并启动 Service。这也是 LeakCanary 的代码风格，无论是 `Service` 还是 `Activity` 基本都提供了一个这样的 static 方法。
 
 ```java
 public static void sendResultToListener(Context context, String listenerServiceClassName,
@@ -93,65 +88,57 @@ public static void sendResultToListener(Context context, String listenerServiceC
 }
 ```
 
-`install` 方法提供了一个默认的 AnalysisResultService - `DisplayLeakService`。
+第一个 `install` 方法提供了一个默认的 `AnalysisResultService` 的一个具体实现 - `DisplayLeakService`。
 
+AbstractAnalysisResultService 的子类 DisplayLeakService
+---
 *com/squareup/leakcanary/DisplayLeakService.java*
 
-先来看覆写的方法 - `onHeapAnalyzed`：
+`DisplayLeakService` 实现了方法 `onHeapAnalyzed(HeapDump heapDump, AnalysisResult result)`。
+
+首先通过 `LeakCanary` 的静态方法 `leakInfo` 创建一个用于描述 heap analysis result 的字符串 - `leakInfo`。
 
 ```java
-@Override
-protected final void onHeapAnalyzed(HeapDump heapDump, AnalysisResult result) {
-  // leakInfo 是 LeakCanary 提供的一个 static 方法，创建一个描述内存泄露的字符串
-  String leakInfo = leakInfo(this, heapDump, result, true);
-  CanaryLog.d(leakInfo);
+String leakInfo = leakInfo(this, heapDump, result, true);
+```
 
-  boolean resultSaved = false;
-  // 如果分析出有泄露或者分析失败（result.failure 不为空）则保存 heapDump
-  boolean shouldSaveResult = result.leakFound || result.failure != null;
-  if (shouldSaveResult) {
-    // renameHeapdump 会给 heapDump.heapDumpFile 文件名上加上时间戳；
-    // 如果 dump 文件数量多于预先设置的数量（默认是 7 个）则按照时间顺序删除旧文件。
-    heapDump = renameHeapdump(heapDump);
-    // 把 dump 结果保存到 disk。
-    resultSaved = saveResult(heapDump, result);
-  }
+如果参数 `AnalysisResult` 的 `leakFound` 为 `true`，并且 `failure` 不为 `null`，那么会通过 `renameHeapdump` 方法为 `heapDump.heapDumpFile` 的文件名加上时间戳，并判断 `heapDumpFile` 所在目录下的文件数量，如果多于设定值（默认为 7 个）则删除旧文件，最后通过 `saveResult` 保存文件。
 
-  // 中间代码省略（构建 Notification 所需要的数据）
-
-  // 通过 Notification 通知用户分析结果，点击后启动 DisplayLeakActivity
-  showNotification(this, contentTitle, contentText, pendingIntent);
-  afterDefaultHandling(heapDump, result, leakInfo);
-}
-
-/**
- * You can override this method and do a blocking call to a server to upload the leak trace and
- * the heap dump.
- */
-protected void afterDefaultHandling(HeapDump heapDump, AnalysisResult result, String leakInfo) {
+```java
+boolean resultSaved = false;
+boolean shouldSaveResult = result.leakFound || result.failure != null;
+if (shouldSaveResult) {
+  heapDump = renameHeapdump(heapDump);
+  resultSaved = saveResult(heapDump, result);
 }
 ```
 
-我们最后再分析显示结果的代码 - `DisplayLeakActivity`，先来看 `install` 方法的另外一个参数 `ExcludedRefs`。
+结果保存以后，发送 Notification 通知用户到 `DisplayLeakActivity` 查看结果。
+
+```java
+showNotification(this, contentTitle, contentText, pendingIntent);
+```
+
+最后给子类一个机会“收拾残局”（上传数据到服务器之类的）。
+```java
+afterDefaultHandling(heapDump, result, leakInfo);
+```
+
+
+```java
+protected void afterDefaultHandling(HeapDump heapDump, AnalysisResult result, String leakInfo) {
+  // dummy
+}
+```
+
+除次之外，第一个 `install` 方法还提供了另外一个参数 `ExcludedRefs`。
 
 ExcludedRefs
 ---
 
-LeakCanary 的 heap analyzer 会寻找 suspected leaking reference 到 GC roots（一般是 reference tree 的叶子节点）的最短路径，但是如果由于路径上的某个节点造成的泄露暂时无法解决，我们应当结束本次寻找，转而去寻找次短路径。
-那么，那么我们应当把这些造成泄漏但是暂时无法解决的节点存储起来，而且最短路径中不能包含这些 reference。
+**LeakCanary** 的 heap analyzer 会寻找 **suspected leaking reference 到 [GC roots](http://stackoverflow.com/questions/6366211/what-are-the-roots)（*一般是 reference tree 的叶子节点*）的最短路径**，但是如果由于路径上的某个节点造成的泄露暂时无法解决，**LeakCanary* 会放弃本次寻找，转而去寻找次短路径。我们应当把这些造成泄漏但是暂时无法解决的节点存储起来，而且最短路径中不能包含这些节点，因为即使报给用户也无法解决，还不如不要浪费时间。
 
-_关于 GC root 可[查看这里](http://stackoverflow.com/questions/6366211/what-are-the-roots)。_
-
-`ExcludedRefs` 其实就是这些 Reference 的存储器。
-
-Reference 可分为以下几种类型：
-
-* field
-* static field
-* thread
-* class
-* root class
-
+`ExcludedRefs` 就事先记录了这些无法解决的节点 `reference`，类型如下：
 ```java
 public final Map<String, Map<String, Exclusion>> fieldNameByClassName;
 public final Map<String, Map<String, Exclusion>> staticFieldNameByClassName;
@@ -159,7 +146,7 @@ public final Map<String, Exclusion> threadNames;
 public final Map<String, Exclusion> classNames;
 public final Map<String, Exclusion> rootClassNames;
 ```
-他们都用 unmodifiable map 来存储：
+他们都用 `UnmodifiableMap` 来存储：
 
 ```java
 ExcludedRefs(BuilderWithParams builder) {
@@ -171,7 +158,7 @@ ExcludedRefs(BuilderWithParams builder) {
 }
 ```
 
-其中 `Exclusion` 是节点 reference 的数据结构：
+其中 `Exclusion` 是 `reference` 的数据结构：
 
 ```java
 public final class Exclusion implements Serializable {
@@ -182,7 +169,7 @@ public final class Exclusion implements Serializable {
 }
 ```
 
-`ExcludedRefs` 同时提供了一个 `Builder`，用于构建 references。
+`ExcludedRefs` 同时提供了一个 `Builder`，用于构建 `references`。
 
 ```java
 public interface Builder {
@@ -195,9 +182,11 @@ public interface Builder {
 }
 ```
 
-其中 `BuilderWithParams` 实现了 `Builder` 接口（*这个地方设计好奇怪*）用于构建一个 `ExcludedRefs`。
+`BuilderWithParams` 实现了 `Builder` 接口用于构建一个 `ExcludedRefs`。
 
-**instanceField** 和 **staticField** 的构建方式相同，我们只看 `staticField` 方法。
+> 这个地方设计好奇怪
+
+`instanceField` 和 `staticField` 的构建方式相同，我们只看 `staticField` 方法。
 
 ```java
 @Override
@@ -213,11 +202,11 @@ public BuilderWithParams staticField(String className, String fieldName) {
 }
 ```
 
-`staticFieldNameByClassName` 的 key 是 `className`，value 是 `excludedFields`，也是一个 Map - `Map<String, ParamsBuilder>`。
+`staticFieldNameByClassName` 的 key 是 `className`，value `excludedFields` 也是一个 Map - `Map<String, ParamsBuilder>`。
 
-`excludedFields` 的 key 是 `fieldName`，value 是一个 `ParamsBuilder`，定义跟 `Exclusion` 一样，也代表 reference 节点。
+`excludedFields` 的 key 是 `fieldName`，value 是一个 `ParamsBuilder`，定义跟 `Exclusion` 一样，也是 `reference` 的数据结构。
 
-**thread**、**clazz**、**rootClass** 的构造方式向同，我们只看 `thread` 方法。
+`thread`、`clazz`、`rootClass` 的构造方式向同，我们只看 `thread` 方法。
 
 ```java
 @Override
@@ -227,13 +216,13 @@ public BuilderWithParams thread(String threadName) {
   return this;
 }
 ```
-`threadNames` 也是一个 map，key 对应 `threadName`, value 是 `ParamsBuilder` 类型的 reference 节点。
+`threadNames` 也是一个 map，key 对应 `threadName`, value 是 一个 `ParamsBuilder`。
 
- LeakCanary 也提供了一个默认的 `ExcludedRefs`，不过构造方式有点特殊，它没有直接继承 `ExcludedRefs`，而是首先定义了一个 enum 类型的类 - `AndroidExcludedRefs`，然后通过 enum 的变量对需要 exclude 的 ref 进行了分类，我们可以通过代码具体来看。
+**LeakCanary** 定义了一个默认的 `ExcludedRefs`，不过构造方式有点特殊，它没有直接继承 `ExcludedRefs`，而是首先定义了一个 `enum` - `AndroidExcludedRefs`，然后通过 `enum` 实例对需要 exclude 的 ref 进行了分类，看代码。
 
- _**注意**：`AndroidExcludedRefs` 是一个 enum，并没有继承 `ExcludedRefs`。_
+ > **注意**：`AndroidExcludedRefs` 是一个 `enum`，并没有继承 `ExcludedRefs`。
 
- 首先是 enum 的全貌：
+ 首先是 `AndroidExcludedRefs` 全貌：
 
 ```java
 public enum AndroidExcludedRefs {
@@ -291,11 +280,10 @@ public enum AndroidExcludedRefs {
 }
 ```
 
-*`EnumSet` 是一个以 enum 为 key 的 set*
+>`EnumSet` 是一个以 `enum` 为 key 的 `set`
 
----
-
-再回到 `install` 方法。
+看完第一个 `install` 方法提供的两个默认参数之后再继续看
+第二个 `install` 方法。
 
 ```java
 /**
@@ -316,7 +304,10 @@ public static RefWatcher install(Application application,
   return refWatcher;
 }
 ```
-`HeapAnalyzerService` 是一个单独的 process。
+
+`isInAnalyzerProcess` 用于保证 `application` 跟 `HeapAnalyzerService` 不是同一个线程，如果分析和监控在同一个线程会影响到 `application` 的内存状态，直接返回一个空的 `RefWatcher`，什么都不做。
+
+通过 `AndroidManifest.xml` 可以看出 `HeapAnalyzerService` 是一个单独的 process。
 
 ```java
 <service
@@ -325,11 +316,8 @@ public static RefWatcher install(Application application,
     android:enabled="false"
     />
 ```
-`isInAnalyzerProcess` 用于保证 `application` 跟 `HeapAnalyzerService` 不是同一个线程，如果分析和监控在同一个线程会影响到 `application` 的内存状态。
 
-如果 `application` 跟 `HeapAnalyzerService` 是同一个 process，则返回一个空的 `RefWatcher`，什么都不做。
-
-来看一下 `enableDisplayLeakActivity(application)` 做了哪些事。
+顺便看一下 `enableDisplayLeakActivity(application)` 做了哪些事。
 
 ```java
 public static void enableDisplayLeakActivity(Context context) {
@@ -369,17 +357,28 @@ public static void setEnabledBlocking(Context appContext, Class<?> componentClas
 }
 ```
 
+> 看名字 `fileIoExecutor` 是一个单线程的用于 IO 操作的 `Executor`，不知道为什么要用它执行 `setEnabledBlocking`，而且为什么 enable 一个 component，没搞懂。
+
+`enableDisplayLeakActivity` 执行完之后，创建了一个 `HeapDump.Listener` 的实例。
+
+```java
+HeapDump.Listener heapDumpListener = new ServiceHeapDumpListener(application, listenerServiceClass);
+```
+
+HeapDump
+---
+
 `HeapDump` 用于存储被 dump 出的 heap 信息（未分析），它包含了如下内容：
 
-* `File heapDumpFile` - dump 文件名，可上传到服务器
-* `String referenceKey` - RefWatcher 会给需要监控的 Reference 创建一个带了 key 和 name 的 `WeakReference`
-* `String referenceName` - Reference 的 name
+* `File heapDumpFile` - dump 文件（可上传到服务器）
+* `String referenceKey` - [RefWatcher](refwatcher-details.md) 会为 `Reference` 创建一个带 key 和 name 的 `WeakReference`
+* `String referenceName` - `Reference` 的 name
 * `ExcludedRefs excludedRefs` - 前面已经分析过了，用于计算最短引用路径时需要排除的节点
-* `long watchDurationMs` - 从 watch request 开始到 gc 之前的时间
-* `long gcDurationMs` - gc 持续时间
+* `long watchDurationMs` - 从开始 watch 到 GC 开始之前的时间
+* `long gcDurationMs` - GC 持续时间
 * `long heapDumpDurationMs` - dump heap 所花费时间
 
-`HeapDump` 还定义了一个内部类 - `Listener`，用于回调分析 heap。
+`HeapDump.Listener` 是 `HeapDump` 的一个内部类，用于回调分析 heap。
 
 ```java
 public interface Listener {
@@ -387,15 +386,7 @@ public interface Listener {
 }
 ```
 
----
-
-`RefWatcher#install` 在 `enableDisplayLeakActivity` 之后创建了一个 `heapDumpListener`。
-
-```java
-HeapDump.Listener heapDumpListener = new ServiceHeapDumpListener(application, listenerServiceClass);
-```
-
-其中 `ServiceHeapDumpListener` 继承自 `HeapDump.Listener`。
+`ServiceHeapDumpListener`  实现了 `HeapDump.Listener`。
 
 ```java
 public final class ServiceHeapDumpListener implements HeapDump.Listener {
@@ -418,18 +409,17 @@ public final class ServiceHeapDumpListener implements HeapDump.Listener {
 }
 ```
 
-构造方法中 enable 了两个 intentService：
+构造方法中 enable 了两个 `intentService`：
 
 * `listenerServiceClass` - `install` 方法传进来的是 `DisplayLeakService`，用于通知用户分析结果
 * `HeapAnalyzerService` - 用于 `runAnalysis`
 
-你耕田来我织布，你分析来我通知，
+知道了 `HeapAnalyzerService` 运行在一个单独的 process 之后再来看它的实现。
 
+HeapAnalyzerService
 ---
 
-继续看 `HeapAnalyzerService` 的实现。
-
-静态方法 `runAnalysis` 启动了 `HeapAnalyzerService`，并把 heapDump 和 listenerServiceClass 传递给它。
+静态方法 `runAnalysis` 启动了 `HeapAnalyzerService`，并把 `heapDump` 和 `listenerServiceClass` 传递给它。
 
 ```java
 private static final String LISTENER_CLASS_EXTRA = "listener_class_extra";
@@ -452,7 +442,7 @@ AnalysisResult result = heapAnalyzer.checkForLeak(heapDump.heapDumpFile, heapDum
 AbstractAnalysisResultService.sendResultToListener(this, listenerClassName, heapDump, result)
 ```
 
-`heapAnalyzer.checkForLeak` 在原理部分再做分析，先来看 `AbstractAnalysisResultService#sendResultToListener`，
+`heapAnalyzer.checkForLeak` 后面再分析，先来看 `AbstractAnalysisResultService#sendResultToListener`，
 它是一个 static 方法，因此无法多态，但是其中一个参数是 `String listenerServiceClassName`，有了 class name 就可以通过 `Class.forName` 找到对应的 class，进而创建一个 `Intent`，启动 `DisplayLeakService`。
 
 ```java
@@ -471,18 +461,17 @@ public static void sendResultToListener(Context context, String listenerServiceC
 }
 ```
 
-通过以上分析可知，**`ServiceHeapDumpListener` 在 `HeapDump` 创建之后通过 `analyze` 方法启动了 HeapAnalyzerService，而 HeapAnalyzerService 在分析完 heap dump file 之后又启动了 `DisplayLeakService`**。
+通过以上分析可知，**`ServiceHeapDumpListener` 在 `HeapDump` 创建之后通过 `analyze` 方法启动了 `HeapAnalyzerService`，而 `HeapAnalyzerService` 在分析完 heap dump file 之后又启动了 `DisplayLeakService`**。
 
-那 `analyze` 是什么时候被调用的呢？再回到 `LeakCanary#install` 方法。
-
----
-
-新建了一个 `heapDumpListener` 之后又通过静态方法 `androidWatcher` 创建了 `RefWatcher`。
+那 `analyze` 是什么时候被调用的呢？再回到 `LeakCanary#install` 方法，创建了 `heapDumpListener` 之后又通过静态方法 `androidWatcher` 创建了一个 `RefWatcher` 实例。
 
 ```java
 HeapDump.Listener heapDumpListener = new ServiceHeapDumpListener(application, listenerServiceClass);
 RefWatcher refWatcher = androidWatcher(application, heapDumpListener, excludedRefs)
 ```
+
+创建RefWatcher
+---
 
 来分析一下 Android 的 `RefWatcher` 是如何被创建出来的。
 
@@ -500,6 +489,9 @@ public static RefWatcher androidWatcher(Context context, HeapDump.Listener heapD
       heapDumpListener, excludedRefs);
 }
 ```
+
+LeakDirectoryProvider
+---
 
 `LeakDirectoryProvider` 是一个用于存储 heap dumps & analysis result 的 interface，除此之外它还定义了用于获取权限的方法。
 
@@ -550,6 +542,9 @@ private boolean hasStoragePermission() {
 }
 ```
 
+DebuggerControl
+---
+
 `DebuggerControl` 也是一个 interface，用于判断 debugger 是否 attached，debugger 会持有变量的 reference 因此会干扰分析，`RefWatcher#watch` 检测到 `debuggerControl.isDebuggerAttached()` 为 `true` 会直接返回，不执行 watch 线程。
 
 ```java
@@ -581,6 +576,9 @@ public final class AndroidDebuggerControl implements DebuggerControl {
 创建完 `AndroidDebuggerControl` 之后，利用 刚刚创建的 `leakDirectoryProvider` 又创建了一个 `AndroidHeapDumper`。
 
 先来看 `AndroidHeapDumper` 的父类 `HeapDumper`，其功能是把 dump heap 到文件。
+
+HeapDumper
+---
 
 ```java
 public interface HeapDumper {
@@ -816,4 +814,4 @@ void onActivityDestroyed(Activity activity) {
 
 よし、开启监控。
 
-点击 [详解 RefWatcher][refwatcher-details.md] 了解 `RefWatcher` 原理。
+点击 [详解 RefWatcher](refwatcher-details.md) 了解 `RefWatcher` 原理。
