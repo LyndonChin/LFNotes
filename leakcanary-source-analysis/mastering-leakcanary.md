@@ -453,7 +453,7 @@ AbstractAnalysisResultService.sendResultToListener(this, listenerClassName, heap
 ```
 
 `heapAnalyzer.checkForLeak` 在原理部分再做分析，先来看 `AbstractAnalysisResultService#sendResultToListener`，
-它是一个 static 方法，因此无法多态，但是其中一个参数是 `String listenerServiceClassName`，有了 `DisplayLeakService` （继承自 `AbstractAnalysisResultService`）的 class name 就可以通过 `Class.forName` 找到对应的 class，进而创建一个 `Intent`，启动 `DisplayLeakService`。
+它是一个 static 方法，因此无法多态，但是其中一个参数是 `String listenerServiceClassName`，有了 class name 就可以通过 `Class.forName` 找到对应的 class，进而创建一个 `Intent`，启动 `DisplayLeakService`。
 
 ```java
 public static void sendResultToListener(Context context, String listenerServiceClassName,
@@ -577,3 +577,243 @@ public final class AndroidDebuggerControl implements DebuggerControl {
   }
 }
 ```
+
+创建完 `AndroidDebuggerControl` 之后，利用 刚刚创建的 `leakDirectoryProvider` 又创建了一个 `AndroidHeapDumper`。
+
+先来看 `AndroidHeapDumper` 的父类 `HeapDumper`，其功能是把 dump heap 到文件。
+
+```java
+public interface HeapDumper {
+
+  File NO_DUMP = null;
+
+  /**
+   * @return a {@link File} referencing the heap dump, or {@link #NO_DUMP} if the heap could not be
+   * dumped.
+   */
+  File dumpHeap();
+}
+```
+
+再来看 `AndroidHeapDumper` 如何利用 `LeakDirectoryProvider` 实现这一功能。
+
+```java
+final Context context;
+final LeakDirectoryProvider leakDirectoryProvider;
+private final Handler mainHandler;
+public AndroidHeapDumper(Context context, LeakDirectoryProvider leakDirectoryProvider) {
+  this.leakDirectoryProvider = leakDirectoryProvider;
+  this.context = context.getApplicationContext();
+  mainHandler = new Handler(Looper.getMainLooper());
+}
+```
+
+构造函数中除了保存 leakDirectoryProvider 和 `Application` 的 context，还 new 了一个主线程的 `mainHandler`。
+
+`dumpHeap` 首先判断 leak directory 是否可写，否的话会请求写权限。
+
+```java
+if (!leakDirectoryProvider.isLeakStorageWritable()) {
+  CanaryLog.d("Could not write to leak storage to dump heap.");
+  leakDirectoryProvider.requestWritePermissionNotification();
+  return NO_DUMP;
+}
+```
+
+这里会有一个问题，如果 `isLeakStorageWritable` 返回 `false` 是因为 external storage 没有挂载，即使申请到了写权限，最终也无法创建 leak directory，并会在 `leakDirectoryProvider#leakDirectory` 方法中抛出异常。
+
+```java
+if (!success && !directory.exists()) {
+  throw new UnsupportedOperationException(
+      "Could not create leak directory " + directory.getPath());
+}
+```
+
+从代码逻辑上来讲，如果 external storage 没有挂载就不应该去申请权限了，但是这样设计也无可厚非，毕竟未挂载的情况比较少见，而且会使 API 的设计更加简洁。
+
+`leakDirectoryProvider.requestWritePermissionNotification()` 会在通知栏显示一个 `Notification`，然后这个 `Notification` 会把用户带到一个请求专门用于请求权限的 `Activity` - `RequestStoragePermissionActivity`。
+
+如果 `leakDirectoryProvider.isLeakStorageWritable()` 返回 `true`，则通过 `getHeapDumpFile` 获取一个 `File`。
+
+```java
+private static final String HEAPDUMP_FILE = "suspected_leak_heapdump.hprof"
+File getHeapDumpFile() {
+  return new File(leakDirectoryProvider.leakDirectory(), HEAPDUMP_FILE);
+}
+```
+
+为了避免同一个 App 里的多个进程同时 dump heap，所以要用一个 `Atomic` 方式去创建刚被 new 出来的 `heapDumpFile`。
+
+```java
+// Atomic way to check for existence & create the file if it doesn't exist.
+// Prevents several processes in the same app to attempt a heapdump at the same time.
+boolean fileCreated;
+try {
+  fileCreated = heapDumpFile.createNewFile();
+} catch (IOException e) {
+  cleanup();
+  CanaryLog.d(e, "Could not check if heap dump file exists");
+  return NO_DUMP;
+}
+
+if (!fileCreated) {
+  CanaryLog.d("Could not dump heap, previous analysis still is in progress.");
+  // Heap analysis in progress, let's not put too much pressure on the device.
+  return NO_DUMP;
+}
+```
+
+其中 `cleanUp` 用于清除 `heapDumpFile`：
+
+```java
+/**
+ * Call this on app startup to clean up all heap dump files that had not been handled yet when
+ * the app process was killed.
+ */
+public void cleanup() {
+  LeakCanaryInternals.executeOnFileIoThread(new Runnable() {
+    @Override public void run() {
+      if (!leakDirectoryProvider.isLeakStorageWritable()) {
+        CanaryLog.d("Could not attempt cleanup, leak storage not writable.");
+        return;
+      }
+      File heapDumpFile = getHeapDumpFile();
+      if (heapDumpFile.exists()) {
+        CanaryLog.d("Previous analysis did not complete correctly, cleaning: %s", heapDumpFile);
+        boolean success = heapDumpFile.delete();
+        if (!success) {
+          CanaryLog.d("Could not delete file %s", heapDumpFile.getPath());
+        }
+      }
+    }
+  });
+}
+```
+
+`heapDumpFile` 创建成功之后会展示一个自定义的 `Toast`，如果 5 秒钟之内 Main Thread 有 idle 状态，则 dump 出一个 [.hprof 文件](http://docs.oracle.com/javase/7/docs/technotes/samples/hprof.html)。
+
+```java
+Debug.dumpHprofData(heapDumpFile.getAbsolutePath())
+```
+
+*关于弹出 Toast 并等待 5 秒钟的代码可参考 [futureresult-and-its-usage.md]*
+
+创建 `AndroidHeapDumper` 之后，清除其他 process 创建的 heap dump file。
+
+```java
+AndroidHeapDumper heapDumper = new AndroidHeapDumper(context, leakDirectoryProvider);
+heapDumper.cleanup();
+```
+
+然后获取 **watch** 时的延迟时间 - `watchDelayMillis`，并创建一个 **watch** 用的 `executor`。
+
+```java
+int watchDelayMillis = resources.getInteger(R.integer.leak_canary_watch_delay_millis);
+AndroidWatchExecutor executor = new AndroidWatchExecutor(watchDelayMillis);
+```
+
+最后创建一个 `RefWatcher`，`androidWatcher` 的使命结束。
+
+```java
+return new RefWatcher(executor, debuggerControl, GcTrigger.DEFAULT, heapDumper,
+        heapDumpListener, excludedRefs);
+```
+
+`RefWatcher` 应该是 `LeakCanary` 的精髓，负责触发 GC 并 **watch** 一个 reference，
+关于它的详细功能请参考 `[refwatcher-details.md]`，我们先回到 `LeakCanary#install` 方法的最后一行：
+
+```java
+ActivityRefWatcher.installOnIcsPlus(application, refWatcher);
+```
+
+`ActivityRefWatcher` 并不是 `RefWatcher` 的子类，这点需要注意，我们从 `installOnIcsPlus` 方法开始分析。
+
+```java
+public static void installOnIcsPlus(Application application, RefWatcher refWatcher) {
+  if (SDK_INT < ICE_CREAM_SANDWICH) {
+    // If you need to support Android < ICS, override onDestroy() in your base activity.
+    return;
+  }
+  ActivityRefWatcher activityRefWatcher = new ActivityRefWatcher(application, refWatcher);
+  activityRefWatcher.watchActivities();
+}
+```
+
+如果 SDK 版本小于 ICS，那么需要手动在 `onDestroy` 方法中通过 `refWatcher` 来 watch 需要被监控的 `activity`。
+ICS 版本 `Application` 类提供了监听 `Activity` 生命周期的方法，方便了许多。
+
+*android/app/Application.java*
+```java
+public void registerActivityLifecycleCallbacks(ActivityLifecycleCallbacks callback) {
+    synchronized (mActivityLifecycleCallbacks) {
+        mActivityLifecycleCallbacks.add(callback);
+    }
+}
+```
+
+通过 `Application` 及 `RefWatcher` 构造一个 `ActivityRefWatcher`：
+```java
+/**
+ * Constructs an {@link ActivityRefWatcher} that will make sure the activities are not leaking
+ * after they have been destroyed.
+ */
+public ActivityRefWatcher(Application application, final RefWatcher refWatcher) {
+  this.application = checkNotNull(application, "application");
+  this.refWatcher = checkNotNull(refWatcher, "refWatcher");
+}
+```
+
+`ActivityRefWatcher` 实例化之后，通过 `application` 注册 activity life callbacks，
+
+```java
+public void watchActivities() {
+  // Make sure you don't get installed twice.
+  stopWatchingActivities();
+  application.registerActivityLifecycleCallbacks(lifecycleCallbacks);
+}
+
+public void stopWatchingActivities() {
+  application.unregisterActivityLifecycleCallbacks(lifecycleCallbacks);
+}
+```
+
+在 `watchActivities` 中调用 `stopWatchingActivities` 可以确保即使 `LeakCanary` 被 `install` 了多次，也可以正常监控。
+
+```java
+private final Application.ActivityLifecycleCallbacks lifecycleCallbacks =
+    new Application.ActivityLifecycleCallbacks() {
+      @Override public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
+      }
+
+      @Override public void onActivityStarted(Activity activity) {
+      }
+
+      @Override public void onActivityResumed(Activity activity) {
+      }
+
+      @Override public void onActivityPaused(Activity activity) {
+      }
+
+      @Override public void onActivityStopped(Activity activity) {
+      }
+
+      @Override public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
+      }
+
+      @Override public void onActivityDestroyed(Activity activity) {
+        ActivityRefWatcher.this.onActivityDestroyed(activity);
+      }
+    };
+```
+
+每个 `Activity` 在 `onDestory` 之后会调用 `ActivityRefWatcher` 的 `onActivityDestroyed` 方法：
+
+```java
+void onActivityDestroyed(Activity activity) {
+  refWatcher.watch(activity);
+}
+```
+
+よし、开启监控。
+
+点击 [详解 RefWatcher][refwatcher-details.md] 了解 `RefWatcher` 原理。
