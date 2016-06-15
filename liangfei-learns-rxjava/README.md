@@ -1,3 +1,9 @@
+TODO
+---
+* [Error handling in RxJava](http://blog.danlew.net/2015/12/08/error-handling-in-rxjava/)
+
+DONE
+---
 * [用 Retrofit 2 简化 HTTP 请求](https://realm.io/cn/news/droidcon-jake-wharton-simple-http-retrofit-2/) - [note](note-on-simple-http-retrofit-2.md)
 * [Retrofit - A type-safe HTTP client for Android and Java](http://square.github.io/retrofit/) - [note](note-on-retrofit-site.md)
 * [给 Android 开发者的 RxJava 详解](http://gank.io/post/560e15be2dca930e00da1083)
