@@ -55,7 +55,7 @@
 0. The Mythical Man Month and Other Essays on Software Engineering : Essays on Software Engineering, Anniversary Edition
 0. Head First Design Patterns
 0. The C++ Programming Language
-0 硅谷之谜
+0. 硅谷之谜
 0. 汽车是怎样跑起来的
 0. 汽车为什么会“跑”
 0. 三体 - “地球往事”三部曲之一
