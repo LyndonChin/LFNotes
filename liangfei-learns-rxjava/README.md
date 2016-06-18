@@ -10,6 +10,7 @@ DONE
 * [Retrofit and RxJava, Android multi-threaded REST requests](http://randomdotnext.com/retrofit-rxjava/)
 * [Grokking RxJava](http://blog.danlew.net/2014/09/15/grokking-rxjava-part-1/) - [NOTE](note-on-grokking-rxjava.md)
 * [Crunching RxAndroid](https://medium.com/crunching-rxandroid/crunching-rxandroid-intro-c27eb6f009ea#.xjgsno48f) - [NOTE](note-on-crunching-rxandroid.md)
+* [Don't break the chain: use RxJava's compose() operator](http://blog.danlew.net/2015/03/02/dont-break-the-chain/)
 
 ### Test
 * [How to mock services with Retrofit 2.0 and the new MockRetrofit class?](http://stackoverflow.com/questions/34740665/how-to-mock-services-with-retrofit-2-0-and-the-new-mockretrofit-class)
