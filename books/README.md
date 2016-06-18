@@ -1,5 +1,3 @@
-日文书
----
 0. 大人の品格が身につく本
 0. 「今の中国」がわかる本
 0. 感動する！数学
@@ -34,9 +32,6 @@
 0. 成功者に学ぶ時間術
 0. まつもとゆきひろ コードの未来
 0. 標準テキスト オフショアプロジェクトマネジメント 【SE編】
-
-英文书
----
 0. Dart : Up and Running
 0. Learning the vi and Vim Editors
 0. Android Developer Tools Essentials
@@ -60,10 +55,7 @@
 0. The Mythical Man Month and Other Essays on Software Engineering : Essays on Software Engineering, Anniversary Edition
 0. Head First Design Patterns
 0. The C++ Programming Language
-
-中文书
----
-0. 硅谷之谜
+0 硅谷之谜
 0. 汽车是怎样跑起来的
 0. 汽车为什么会“跑”
 0. 三体 - “地球往事”三部曲之一
