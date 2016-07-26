@@ -165,8 +165,8 @@ public void prepareMatrixValuePx(float xChartMin, float deltaX, float deltaY, fl
 ```
 
 ```java
-public void prepareMatrixOffset(boolean inverted) {
 protected Matrix mMatrixOffset = new Matrix();
+public void prepareMatrixOffset(boolean inverted) {
   mMatrixOffset.reset();
   if (inverted) { // 翻转 Y 轴
     mMatrixOffset.setTranslate(mViewPortHandler.offsetLeft(), -mViewPortHandler.offsetTop());
