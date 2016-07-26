@@ -89,7 +89,7 @@ Y |                          *
 
 上图中 X 轴以上的部分由于超出 View 边界，无法绘制，所以我们还需要对 A'' 和 B'' 在 Y 轴进行平移。
 
-*想象把 X 轴往下移动了 `height` 的距离，A'' 和 B'' 会跟着移动相同距离*
+（**想象把 X 轴往下移动了 `height` 的距离，A'' 和 B'' 会跟着移动相同距离**）
 
 ```
 A''' = A'' + (0, height)
@@ -105,13 +105,81 @@ B''' = B'' + (0, height)
   ^                                    |------------------------------>
   |                                    |
   |                                    |
-  |               B....................................B'''
+  |               B.. .. .. .. .. .. .. .. .. .. .. ..B'''
   |                                    |
   |                                    |
-  |        A ..........................|........A'''
+  |        A.. .. .. .. .. .. .. .. .. |.. .. ..A'''
   |                                    |
   |                                    |
   |--------------------------->       \|/
 </pre>
 
+其实 MPAndroidCharts 还定义了一个 `ViewPortHandler` 用于处理绘图区域。
+
+<pre>
+                                      X
+  -------------------------------------->
+  |            top offset             |
+  |                                   |
+  | l    * * * * * * * * * * * *    r |
+  | e    *                     *    i |
+  | f    *                     *    g |
+  | t    *                     *    h |
+  |      *                     *    t |
+  | o    *       VIEW PORT     *      |
+  | f    *                     *    o |
+  | f    *                     *    f |
+  | s    *                     *    f |
+  | e    *                     *    s |
+  | t    * * * * * * * * * * * *    e |
+  |                                 t |
+  |            bottom offset          |
+  |-----------------------------------|
+Y |
+ \|/
+
+</pre>
+
+那么 A''、B'' 的位移应该由  `(0, height)` 改为 `(leftOffset, height - bottomOffset)`。
+
+```
+A''' = A'' + (leftOffset, height - bottomOffset)
+B''' = B'' + (leftOffset, height - bottomOffset)
+```
+
+结合代码来看，首先是从用户数据到 **VIEW PORT** 坐标值的转换矩阵 - `mMatrixValueToPx`：
+
+*com.github.mikephil.charting.utils.Transformer.java*
+
+```java
+protected Matrix mMatrixValueToPx = new Matrix();
+protected Matrix mMatrixOffset = new Matrix();
+
+public void prepareMatrixValuePx(float xChartMin, float deltaX, float deltaY, float yChartMin) {
+  // 计算缩放倍数
+  float scaleX = mViewPortHandler.contentWidth() / deltaX;
+  float scaleY = mViewPortHandler.contentHeight() / deltaY;
+
+  if (Float.isInfinite(scaleX)) scaleX = 0;
+  if (Float.isInfinite(scaleY)) scaleY = 0;
+
+  mMatrixValueToPx.reset();
+  // 坐标原点设为 (xChartMin, yChartMin) 
+  mMatrixValueToPx.postTranslate(-xChartMin, -yChartMin);
+  // Y 轴翻转
+  mMatrixValueToPx.postScale(scaleX, -scaleY);
+}
+
+public void prepareMatrixOffset(boolean inverted) {
+  mMatrixOffset.reset();
+  if (inverted) { // 翻转 Y 轴
+    mMatrixOffset.setTranslate(mViewPortHandler.offsetLeft(), -mViewPortHandler.offsetTop());
+    mMatrixOffset.postScale(1.0f, -1.0f);
+  } else {
+    // offset 位移
+    mMatrixOffset.postTranslate(mViewPortHandler.offsetLeft(), 
+                        mViewPortHandler.getChartHeight() - mViewPortHandler.offsetBottom());
+  }
+}
+```
 
