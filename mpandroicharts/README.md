@@ -8,7 +8,7 @@ MPAndroidCharts 的精髓应该是**通过一系列矩阵运算实现坐标转�
 坐标转换
 ---
 
-Android 的坐标系统与我们常用的坐标系统不同，而用户提供的是基于标“准坐标系”的数据，所以在绘制之前我们必须先进行坐标转换。
+Android 的坐标系统与我们常用的坐标系统不同，而用户提供的是基于“标准坐标系”的数据，所以在绘制之前我们必须先进行坐标转换。
 
 *Android 坐标系*
 <pre>
@@ -147,14 +147,12 @@ A''' = A'' + (leftOffset, height - bottomOffset)
 B''' = B'' + (leftOffset, height - bottomOffset)
 ```
 
-结合代码来看，首先是从用户数据到 **VIEW PORT** 坐标值的转换矩阵 - `mMatrixValueToPx`：
+结合代码来看，首先是从用户数据到 **VIEW PORT** 坐标值的转换。
 
 *com.github.mikephil.charting.utils.Transformer.java*
 
 ```java
 protected Matrix mMatrixValueToPx = new Matrix();
-protected Matrix mMatrixOffset = new Matrix();
-
 public void prepareMatrixValuePx(float xChartMin, float deltaX, float deltaY, float yChartMin) {
   // 计算缩放倍数
   float scaleX = mViewPortHandler.contentWidth() / deltaX;
@@ -169,8 +167,11 @@ public void prepareMatrixValuePx(float xChartMin, float deltaX, float deltaY, fl
   // Y 轴翻转
   mMatrixValueToPx.postScale(scaleX, -scaleY);
 }
+```
 
+```java
 public void prepareMatrixOffset(boolean inverted) {
+protected Matrix mMatrixOffset = new Matrix();
   mMatrixOffset.reset();
   if (inverted) { // 翻转 Y 轴
     mMatrixOffset.setTranslate(mViewPortHandler.offsetLeft(), -mViewPortHandler.offsetTop());
@@ -182,4 +183,28 @@ public void prepareMatrixOffset(boolean inverted) {
   }
 }
 ```
+
+`mMatrixValueToPx` 负责用户数据到坐标值，而`mMatrixOffset` 负责把坐标值位移到 **VIEW PORT**。 
+
+MPAndroidCharts 的**手势操作**也是基于矩阵转换，而手势矩阵作用于整个 `Chart`，所以必须要手势矩阵完成之后才能进行 offset 位移。
+
+<pre>
+坐标矩阵 -> 手势矩阵 -> 位移矩阵
+</pre>
+
+继续看 `Transformer` 提供的方法：
+
+*用户数值转换为最终坐标值*
+```java
+public void pointValuesToPixel(float[] pts) {
+  // value to pixel
+  mMatrixValueToPx.mapPoints(pts);
+  // gesture
+  mViewPortHandler.getMatrixTouch().mapPoints(pts);
+  // offset
+  mMatrixOffset.mapPoints(pts);
+}
+```
+
+
 
