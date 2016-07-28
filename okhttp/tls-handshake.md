@@ -33,8 +33,6 @@ public enum TlsVersion {
 
 SSL协议是Netcape公司于上世纪90年代中期提出的协议，自身发展到3.0版本。1999年该协议由ITEL接管，进行了标准化，改名为TLS。
 
-## CipherSuite
-
 `CipherSuite` 可以简单理解成是**密钥算法套件**。
 
 *from wiki*
@@ -61,7 +59,31 @@ public static final CipherSuite TLS_RSA_WITH_RC4_128_SHA = of("SSL_RSA_WITH_RC4_
 // ....
 ```
 
+`Certificate` 就是证书，握手时双方（peer & local）各自交换证书，具体的证书类型都继承自 `Certificate`，例如 `X509Certificate`。
 
+*from wiki*
+> In cryptography, X.509 is an important standard for a public key infrastructure (PKI) to manage digital certificates[1] and public-key encryption[2] and a key part of the Transport Layer Security protocol used to secure web and email communication. An ITU-T standard, X.509 specifies formats for public key certificates, certificate revocation lists, attribute certificates, and a certification path validation algorithm.
+
+---
+
+除了以上数据之外，`Handshake` 还有两个静态 `get` 方法，可以通过参数创建一个 `Handshake` 实例。
+
+```java
+public static Handshake get(SSLSession session);
+public static Handshake get(TlsVersion tlsVersion, CipherSuite cipherSuite, 
+    List<Certificate> peerCertificates, List<Certificate> localCertificates)
+```
+
+其中 `SSLSession` 由 JDK 提供 - `javax.net.ssl.SSLSession`，从字面意思上看就是一个 SSL 会话，暂不深究。它与 `CipherSuite` 的对应关系如下：
+
+```java
+String cipherSuiteString = session.getCipherSuite();
+String tlsVersionString = session.getProtocol();
+Certificate[] peerCertificates = session.getPeerCertificates();
+Certificate[] localCertificates = session.getLocalCertificates();
+```
+
+总之，`get` 方法会创建一个 `Handshake` 实例。
 
 
 参考文章
