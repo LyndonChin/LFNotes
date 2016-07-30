@@ -94,3 +94,52 @@ LegendRenderer#renderLegend(canvas);
               |
 BarLineChartBase#onDraw(Canvas canvas)
 </pre>
+
+AxisRenderer
+---
+
+`AxisRenderer` 是**坐标轴**渲染器，除了渲染对象 `AxisBase` 实例之外，它还定义了绘图所需要的四个 `Paint`，当然还有绘图必不可少的坐标转换器 - `Transformer`。
+
+```java
+protected AxisBase mAxis; // 渲染对象
+protected Transformer mTrans; // 坐标转换
+
+protected Paint mGridPaint; // 图表网格
+protected Paint mAxisLabelPaint; // 坐标 Label
+protected Paint mAxisLinePaint; // 坐标线
+protected Paint mLimitLinePaint; // 图表所需 Limit Line
+```
+
+`AxisRenderer` 会根据父类定义的成员变量 - `ViewPortHandler` 去计算出绘图区域中左上角（点p1）和左下角（点p2）分别对应的**真实值**（非坐标值）。
+
+```java
+MPPointD p1 = mTrans.getValuesByTouchPoint(mViewPortHandler.contentLeft(), mViewPortHandler.contentTop());
+MPPointD p2 = mTrans.getValuesByTouchPoint(mViewPortHandler.contentLeft(), mViewPortHandler.contentBottom());
+```
+
+`Transfromer#getValuesByTouchPoint` 可以把坐标值转换成真实值，[坐标转换](coordinate-transformations.md) 一节已经讲解过转换原理。
+
+如果 Y 轴不翻转，那么 `p1.y` 就是最大值，`p2.y` 是最小值。
+
+```java
+if (!inverted) {
+  min = (float) p2.y;
+  max = (float) p1.y;
+} else {
+  min = (float) p1.y;
+  max = (float) p2.y;
+}
+```
+
+然后根据 `max` `min` 计算出坐标轴 `mAxis` 上的**点** - `computeAxisValues(float min, float max)`。
+
+首先根据用户设定的 `labelCount` 计算出每个 `label` 的间隔值 - `interval`。
+
+```java
+int labelCount = mAxis.getLabelCount();
+double range = Math.abs(max - min);
+double rawInterval = range / labelCount;
+double interval = Utils.roundToNextSignificant(rawInterval);
+```
+
+`roundToNextSignificant` 
