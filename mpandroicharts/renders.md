@@ -233,12 +233,6 @@ double last = interval == 0.0 ? 0.0 : Utils.nextUp(Math.floor(yMax / interval) *
 
 这样可以保证 `label` 位于 `(min, max)` 区间内。
 
-最后，如果 `label` 居中显示：
-
-```java
-boolean centeringEnabled = mAxis.isCenterAxisLabelsEnabled();
-```
-
 然后设置一下小数点位数：
 
 ```java
@@ -250,6 +244,10 @@ if (interval < 1) {
 ```
 
 如果要居中显示 label，那么 `n = labelCount + 1`，label 坐标上移 `offset`。
+
+```java
+boolean centeringEnabled = mAxis.isCenterAxisLabelsEnabled();
+```
 
 ```java
 float offset = (mAxis.mEntries[1] - mAxis.mEntries[0]) / 2f;
