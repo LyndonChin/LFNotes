@@ -142,4 +142,129 @@ double rawInterval = range / labelCount;
 double interval = Utils.roundToNextSignificant(rawInterval);
 ```
 
-`roundToNextSignificant` 
+`roundToNextSignificant` 会根据四舍五入向量级取整：
+
+```
+15001 ->20000.0 
+14999 ->10000.0
+```
+
+如果用户指定了 `Granularity` 那么就取两者最大值，主要为了解决 `label` 多而 `range` 小的情况会显示过密。
+
+```java
+if (mAxis.isGranularityEnabled()) {
+  interval = Math.max(interval, mAxis.getGranularity());
+}
+```
+
+如果 `interval` 的最高位数字 > 5 就升高一个量级，例如 65001 变为 100000。
+
+```java
+double intervalMagnitude = Utils.roundToNextSignificant(Math.pow(10, (int) Math.log10(interval)));
+int intervalSigDigit = (int) (interval / intervalMagnitude);
+if (intervalSigDigit > 5) {
+  interval = Math.floor(10 * intervalMagnitude);
+}
+```
+
+如果用户设定了必须要绘制 `labelCount` 个 label，那么绘制方式如下所示：
+
+<pre>
+                  axis
+            label5 *
+                   * 
+      (max) ------ *
+                   *
+            label4 * 
+                   *
+                   *
+                   *
+            label3 *---------------------------------
+                   *
+                   *  step = range / (labelCount - 1)
+                   *
+            label2 *----------------------------------
+                   *
+                   *
+                   *
+ (min+step) label1 *
+                   *
+                   *
+                   *
+      (min) label0 *
+</pre>
+
+计算结果为：
+
+```java
+mAxis.mEntries = new float[] {label0, label1, label2, label3, label4, label5};
+mAxis.mEntryCount = labelCount;
+```
+
+这样做可能 `label5` 的值会超出 `max` 值。
+
+如果没有强制 label 的个数，那么最小值和最大值都会换算成 `interval` 的倍数。
+
+```java
+double first = interval == 0.0 ? 0.0 : Math.ceil(yMin / interval) * interval;
+double last = interval == 0.0 ? 0.0 : Utils.nextUp(Math.floor(yMax / interval) * interval);
+```
+
+绘制效果如下所示：
+
+<pre>
+                 axis
+   (max) ----------*
+   (last)   label3 *
+                   *
+                   *
+                   *
+            label2 *-----------
+                   *
+                   * interval
+                   *
+            label1 *-----------
+                   *
+                   *
+                   *
+   (first)  label0 *
+   (min) --------- *
+</pre>
+
+这样可以保证 `label` 位于 `(min, max)` 区间内。
+
+最后，如果 `label` 居中显示：
+
+```java
+boolean centeringEnabled = mAxis.isCenterAxisLabelsEnabled();
+```
+
+然后设置一下小数点位数：
+
+```java
+if (interval < 1) {
+  mAxis.mDecimals = (int) Math.ceil(-Math.log10(interval));
+} else {
+  mAxis.mDecimals = 0;
+}
+```
+
+如果要居中显示 label，那么 `n = labelCount + 1`，label 坐标上移 `offset`。
+
+```java
+float offset = (mAxis.mEntries[1] - mAxis.mEntries[0]) / 2f;
+for (int i = 0; i < n; i++) {
+  mAxis.mCenteredEntries[i] = mAxis.mEntries[i] + offset;
+}
+```
+
+---
+
+`AxisRenderer` 只负责计算，渲染的“脏活累活”就交给子类去做吧。
+
+```java
+public abstract void renderAxisLabels(Canvas c);
+public abstract void renderGridLines(Canvas c);
+public abstract void renderAxisLine(Canvas c);
+public abstract void renderLimitLines(Canvas c);
+```
