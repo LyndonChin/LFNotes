@@ -74,7 +74,7 @@ public static Handshake get(TlsVersion tlsVersion, CipherSuite cipherSuite,
     List<Certificate> peerCertificates, List<Certificate> localCertificates)
 ```
 
-其中 `SSLSession` 由 JDK 提供 - `javax.net.ssl.SSLSession`，从字面意思上看就是一个 SSL 会话，暂不深究。它与 `CipherSuite` 的对应关系如下：
+其中 `SSLSession` 由 JDK 提供 - `javax.net.ssl.SSLSession`，从字面意思上看就是一个 SSL 会话，暂不深究。它与 `Handshake` 的对应关系如下：
 
 ```java
 String cipherSuiteString = session.getCipherSuite();
