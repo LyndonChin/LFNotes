@@ -266,3 +266,51 @@ public abstract void renderGridLines(Canvas c);
 public abstract void renderAxisLine(Canvas c);
 public abstract void renderLimitLines(Canvas c);
 ```
+
+### XAxisRenderer
+
+作为 `AxisRenderer` 的子类，`XAxisRenderer` 负责渲染 X 坐标轴。
+
+`AxisRenderer#computeAxis` 虽然是父类方法，却计算了 Y 轴所需数据，显然设计是不合理的。因此 `XAxisRenderer` 覆写了 `computerAxis` 方法，通过**左上角**和**右上角**的点来获取 `min`、`max`。
+
+```java
+MPPointD p1 = mTrans.getValuesByTouchPoint(mViewPortHandler.contentLeft(), mViewPortHandler.contentTop());
+MPPointD p2 = mTrans.getValuesByTouchPoint(mViewPortHandler.contentRight(), mViewPortHandler.contentTop());
+
+if (inverted) {
+  min = (float) p2.x;
+  max = (float) p1.x;
+} else {
+  min = (float) p1.x;
+  max = (float) p2.x;
+}                                                                                                    }
+
+computeAxisValues(min, max);
+```
+
+`computeAxisValues` 复用了父类方法 `super.computerAxisValues` 来计算坐标轴上的数值。
+
+```java
+@Override
+protected void computeAxisValues(float min, float max) {
+  super.computeAxisValues(min, max);
+  computeSize();
+}
+```
+
+`computeSize` 计算了 `label` 的 `width` 和 `height`。
+
+渲染方法实现了父类的 `abstract` 方法。 
+
+* **renderAxisLabels**
+
+首先通过 `mXAxis.getPosition()` 获取坐标轴位置，根据位置计算出坐标轴上所有 label 的坐标值，最后进行渲染。
+
+*X 轴位置，定义在 XAxis.java*
+```java
+public enum XAxisPosition {
+  TOP, BOTTOM, BOTH_SIDED, TOP_INSIDE, BOTTOM_INSIDE
+}
+```
+
+* **renderAxisLine**
