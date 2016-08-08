@@ -1,6 +1,6 @@
-我们从 `okhttp3.Handshake` 开始，彻底搞懂什么是 Handshake。
+我们从 `okhttp3.Handshake` 开始，一步一步彻底搞懂什么是 Handshake。
 
-Handshake 是双方在正式传送数据之前的一次“握手”，双方要在协商一致的前提下才能继续沟通，否则拜拜。
+Handshake 是双方在正式传送数据之前的一次“握手”，双方要在协商一致的前提下才能继续沟通，否则只能说拜拜。
 
 ```java
 public final class Handshake {
@@ -12,11 +12,11 @@ public final class Handshake {
 }
 ```
 
-Handshake 的成员变量表明了它所需要的数据。
+Handshake 成员变量表明了一次“握手”所需要的数据。
 
 > 注意它们都有 `final` 修饰。
 
-首先是本次 handshake 所支持的 TLS 版本 - `TlsVersion tlsVersion`。
+首先是本次“握手”所支持的 TLS 版本 - `TlsVersion tlsVersion`。
 
 ## TlsVersion
 
@@ -31,7 +31,7 @@ public enum TlsVersion {
 }
 ```
 
-SSL协议是Netcape公司于上世纪90年代中期提出的协议，自身发展到3.0版本。1999年该协议由ITEL接管，进行了标准化，改名为TLS。
+SSL 协议是 Netscape 公司于上世纪 90 年代中期提出的协议，自身发展到 3.0 版本。1999 年该协议由 ITEL 接管，进行了标准化，改名为 TLS。
 
 `CipherSuite` 可以简单理解成是**密钥算法套件**。
 
