@@ -1,36 +1,3 @@
-Excluding Tasks
----
+## Posts
 
-```bash
-> gradle dist - x test
-```
-
-Lazy dependsOn
----
-
-```groovy
-task hello << {
-  println 'Hello world!'
-}
-
-task intro(dependsOn: hello) << {
-  println "I'm Gradle"
-}
-```
-<pre>
- |
- |
-\|/
-</pre>
-
-```groovy
-task taskX(dependsOn: 'taskY') << {
-  println 'taskX'
-}
-
-task taskY << {
-  println 'taskY'
-}
-```
-
-* The `<<` operator is simply an alias for `doLast`.
+* [Implementation Vs Api in Android Gradle plugin 3.0](https://medium.com/mindorks/implementation-vs-api-in-gradle-3-0-494c817a6fa)

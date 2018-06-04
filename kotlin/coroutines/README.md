@@ -10,8 +10,13 @@ Posts
 * [Understanding suspend function of Kotlin Coroutines](https://medium.com/@elye.project/understanding-suspend-function-of-coroutines-de26b070c5ed)
 * [RxJava vs. Kotlin Coroutines, a quick look](http://akarnokd.blogspot.jp/2017/09/rxjava-vs-kotlin-coroutines-quick-look.html)
 * [Kotlin Coroutines, a deeper look](https://medium.com/@elizarov/kotlin-coroutines-a-deeper-look-180536305c3f)
+* [how to free yourself from Callback Spaghetti Hell](https://medium.com/inside-bux/kotlin-coroutines-12a263890d2b)
 
 Videos
 ---
 * [KotlinConf 2017 - Introduction to Coroutines by Roman Elizarov](https://www.youtube.com/watch?v=_hfBv0a09Jc&t=1565s)
 * [KotlinConf 2017 - Deep Dive into Coroutines on JVM by Roman Elizarov](https://www.youtube.com/watch?v=YrrUCSi72E8)
+
+Codes
+---
+* [retrofit2-kotlin-coroutines-adapter](https://github.com/JakeWharton/retrofit2-kotlin-coroutines-adapter)
