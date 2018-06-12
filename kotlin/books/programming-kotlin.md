@@ -273,6 +273,74 @@ fun whenWithoutArgs(x: Int, y: Int) {
     * Extensibility
     * Resusability
 
+### Classes
+> The concept of a class was first studied by **Aristotle**.
+
+```kotlin
+class Person(val firstName: String, val lastName: String, val age: Int?) {
+    init {
+        require(firstName.trim().length > 0) { "Invalid firstName argument." }
+        require(lastName.trim().length > 0) { "Invalid lastName argument." }
+        if (age != null) { 
+            require(age >= 0 && age < 150) { "Invalid age argument" }
+        }
+    }
+}
+```
+
+### Access levels
+
+### Nested classes
+
+### Data classes
+
+### Enum classes
+```kotlin
+interface Printable {
+    fun print()
+}
+
+public enum class World : Printable {
+    HELLO {
+        override fun print() {
+            println("World is HELLO")
+        }
+    }
+
+    BYE {
+        override fun print() {
+            println("World is BYE")
+        }
+    }
+}
+
+val w = World.HELLO
+w.print()
+```
+
+### Static methods and companion objects
+
+In Kotlin, it is advisable to define methods at the package level to achieve the functionality of static methods.
+
+Class initializer is called only once, JVM will make sure this happens, before:
+* An instance of the class created
+* A static method of the class is invoked
+* A static field of the class is assigned
+* A non-constant static field is used
+* An assert statement lexically nested within the class is executed for a top-level class
+
+### Interfaces
+* An interface is nothing more than an contract. 
+* Unlike abstract classes, an interface cannot contain state; however, it can contain properties.
+
+### Inheritance
+
+### Visibility modifiers
+
+[The Liskov Substitution Principle (LSP)](https://www.tomdalling.com/blog/software-design/solid-class-design-the-liskov-substitution-principle/)
+
+### Abstract classes
+
 ## Functions in Kotlin
 ## Higher Order Functions and Functional Programming
 ## Properties
