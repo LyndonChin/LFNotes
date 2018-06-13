@@ -341,11 +341,152 @@ Class initializer is called only once, JVM will make sure this happens, before:
 
 ### Abstract classes
 
+### Interface or abstract class
+
+* Rules to choose an interface or an abstract class
+    * Is-a versus Can-Do
+    * Promote code reuse
+    * Versioning
+
+### Polymorphism
+
+
 ## Functions in Kotlin
 ## Higher Order Functions and Functional Programming
+> Write cleaner and more expressive code.
+
+### Higher order functions
+> A higher order function is simply a function that either accepts another funtion as a parameter, returns a function as its return value, or both.
+
+```kotlin
+fun foo(str: String, fn: (String) -> String): Unit {
+    val applied = fn(str)
+    println(applied)
+}
+
+foo("hello", { it.reversed() })
+```
+
+`%`: modulo operator
+
+### Returning a function
+```kotlin
+fun bar(): (String) -> String = { str -> str.reversed() }
+```
+
+### Function assignment
+
+```kotlin
+val isEven: (Int) -> Boolean = modulo(2)
+listOf(1, 2, 3, 4).filter(isEven)
+listOf(5, 6, 7, 8).filter(isEven)
+```
+
+Languages that support higher order functions and function assignment are said to support *first class* functions.
+
+### Closures
+In functional programming, a closure is a function that has access to variables and parameters defined in outer scopes. It is said that they "close over" these variables, hence the name *closure*.
+
+Closures can also mutate variables they have closed over:
+```kotlin
+var containsNegative = false
+
+val ints = listOf(0, 1, 2, 3, 4, 5)
+ints.forEach {
+    if (it < 0)
+        containsNegative = true
+}
+```
+
+Closures are implemented by increasing the arity of the function to accept extra parameters, which are the closed-over variables. The compiler inserts this automatically.
+
+### Anonymous functions
+
+```kotlin
+val ints = listOf(1, 2, 3)
+val evens = ints.filter(fun(k) = k % 2 == 0)
+```
+
+### Function references
+
+#### Top-level function references
+
+```kotlin
+fun isEven(k: Int): Boolean = k % 2 == 0
+
+val ints = listOf(1, 2, 3, 4, 5)
+ints.filter { isEvent(it) }
+
+// Use function reference
+ints.filter(::isEvent)
+```
+
+#### Member and extension function references
+
+```kotlin
+fun Int.isOdd(): Boolean = this % 2 != 0
+
+val ints = listOf(1, 2, 3, 4, 5)
+ints.filter { it.isOdd() }
+
+// Use function reference
+ints.filter(Int::isOdd)
+```
+
+#### Bound references
+
+```kotlin
+fun String.equalsIgnoreCase(other: String) = this.toLowerCase() == other.toLowerCase()
+
+listOf("foo", "moo", "boo").filter {
+    (String::equalsIgnoreCase)("bar", it)
+}
+
+// Use bound references
+listOf("foo", "baz", "BAR").filter("bar"::equalsIgnoreCase)
+```
+
+### Function-literal receivers
+
+### Functions in the JVM
+#### Bytecode
+
+### Functions composition
+
+```kotlin
+fun <A, B, C> compose(fn1: (A) -> B, fn2: (B) -> C): (A) -> C = { a ->
+    val b = fn1(a)
+    val c = fn2(b)
+    c
+}
+
+val f = String::length
+val g = Any::hashCode
+val fog = compose(f, g)
+```
+
+### Currying and partial application
+
 ## Properties
 ## Null Safety, Reflection, and Annotations
+
 ## Generics
+### Nothing Type
+
+* `Nothing` is the subtype of all other types.
+* If we have a covariant type, and we want to create an instance that is compatible with all supertypes, we can use `Nothing` as the type parameter.
+* `Nothing` as a type is often used for the trick when we have a type that we might wish to have an empty, or no-op instance of.
+
+```kotlin
+interface Marshaller<out T> {
+    fun marshall(json: String): T?
+}
+
+object NoopMarshaller : Marshaller<Nothing> {
+    override fun marshall(json: String) = null
+}
+```
+
 ## Data Classes
 ## Collections
 ## Testing in Kotlin
