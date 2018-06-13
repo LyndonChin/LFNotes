@@ -467,6 +467,20 @@ val fog = compose(f, g)
 
 ### Currying and partial application
 
+```kotlin
+fun foo(a: String, b: Int): Boolean
+
+fun foo(a: String): (Int) -> Boolean
+```
+
+Currying is related to the idea of partial application. Partial application is the process by which some, but not all, of the parameters of a function are specified in advance, returning a new function that accepts the missing parameters. The parameters that have been given are said to be fixed. In other words, partial application produces a specialized function from a more generic function.
+
+Partial application is useful for at least two reasons. 
+* Firstly, when some parameters are available in the current scope, but not every scope, we can partially apply those values, and then just pass a function of lower arity. This avoids the need to pass down all the parameters, as well as the function. 
+* Secondly, similar to currying, we can use partial application to reduce the arity of a function in order to match a lower arity input type of another function.
+
+### Currying in action
+
 ## Properties
 ## Null Safety, Reflection, and Annotations
 
