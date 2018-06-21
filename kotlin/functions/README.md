@@ -128,3 +128,44 @@ val printAndReturn = {i: Int, j: Int -> println("I calculate $i + $j"); i+j }
 
 那么什么是闭包呢？很重要一点：在 lambda 内可以修改它所包含的局部变量。
 Lambda expressions that enclose local variables and allow us to change them inside the function body are called **closures**.
+
+Lambda expressions can use and modify variables from the local context.
+
+LINQ style is popular in functional languages because it make the syntax of collections or string processing really simple and concise.
+
+Higher-order functions
+---
+A higher order function is a function that takes at least one function as an argumet, or returns a function as its result.
+
+The three most common cases when functions in arguments are used are:
+* Providing operations to functions
+* The Observer (Listener) pattern
+* A callback after a threaded operation
+
+lambda 表达式一个很大的问题是不具备 self-explanatory
+
+The last lambda in an argument convention
+---
+* named code surrouding
+
+Java SAM support in Kotlin
+---
+* A *funciton literal* is an expression that defines an unnamed function. In Kotin, there are two kinds of *function literal*:
+    * Anonymous functions
+    * Lambda expressions
+
+```kotlin
+val a = fun() { } // Anonymous function
+val b = {} // Lambda expression
+```
+
+lambda 可以写成多行，当然多行也可以用分号来分隔：
+
+```kotlin
+view.setOnLongClickListener { /* ... */; true }
+view.onFocusChange { view, b -> /* ... */ }
+
+val callback = Runnable { /* ... */ }
+view.postDelayed(callback, 1000)
+view.removeCallbacks(callback)
+```

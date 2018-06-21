@@ -110,4 +110,6 @@ the last expression in the block is the result.
 
 If you specify the name of an argument in a call, you should also specify the names for all the arguments after that, to avoid confusion.
 
+## Programming with lambdas
 
+*Lambda expressions*, or simply *lambdas*, are essentially small chunks of code that can be passed to other functions.

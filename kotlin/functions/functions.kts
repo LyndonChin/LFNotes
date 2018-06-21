@@ -1,15 +1,32 @@
-fun printSum(vararg numbers: Int) {
-    val sum = numbers.sum()
-    println(numbers::class.qualifiedName)
-    println(sum)
+fun sum(numbers: List<BigDecimal>) = 
+    fold(numbers, BigDecimal.ZERO) { acc, num -> acc + num }
+
+fun prod(numbers: List<BigDecimal>) = 
+    fold(numbers, BigDecimal.ONE) { acc, num -> acc * num }
+
+private fun fold(
+            numbers: List<BigDecimal>,
+            start: BigDecimal,
+            accumulator: (BigDecimal, BigDecimal) -> BigDecimal
+        ): BigDecimal {
+            var acc = start
+            for (num in numbers) {
+                acc = accumulator(acc, num)
+            }
+            return acc
+        }
+
+// Usage
+fun BD(i: Long) = BigDecimal.valueOf(i)
+val numbers = listOf(BD(1), BD(2), BD(3), BD(4))
+println(sum(numbers))
+println(prod(numbers))
+
+fun makeErrorHandler(tag: String) = fun (error: Throwable) {
+    if (BuildConfig.DEBUG) Log.e(tag, error.message, error)
+    toast(error.message)
+    // Other methods, like: Crashlytics.logException(error)
 }
 
-printSum(1, 2, 3, 4, 5)
-printSum()
-
-fun forEach(op: (Int) -> Unit, vararg numbers: Int) {
-    numbers.forEach(op)
-}
-
-forEach({ num: Int -> println(num) }, 1, 2, 3, 5 )
-
+// Usage in project
+val adController = AdController(makeErrorHandler("Ad in MainActivity"))
